@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"net/http"
 	db "nucleus/db/sqlc"
 	_ "nucleus/docs/swagger"
 	"nucleus/internal/auth"
@@ -20,7 +19,6 @@ import (
 	"nucleus/pkg/monitoring/logging"
 	"nucleus/pkg/ratelimit"
 	"nucleus/pkg/redis"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -130,24 +128,6 @@ func main() {
 	// Apply global IP rate limiting middleware
 	r.Use(ratelimit.IPRateLimitMiddleware(rateLimiter, cfg.IPRateLimit, time.Minute))
 
-	// Recovery middleware to ensure panics in /api return JSON
-	r.Use(func(c *gin.Context) {
-		defer func() {
-			if rec := recover(); rec != nil {
-				path := c.Request.URL.Path
-				if strings.HasPrefix(path, "/api/") {
-					c.JSON(500, gin.H{
-						"error": fmt.Sprintf("internal server error: %v", rec),
-					})
-					c.Abort()
-					return
-				}
-				panic(rec) // let Gin’s default recovery handle non-API
-			}
-		}()
-		c.Next()
-	})
-
 	// Register request logging middleware (stdout + file)
 	r.Use(middleware.NewRequestLogger("tmp/logs/logs.json", cfg))
 
@@ -183,18 +163,6 @@ func main() {
 	v1.POST("/auth/forgot-password", authHandler.ForgotPassword)
 	v1.POST("/auth/reset-password", authHandler.ResetPassword)
 
-	v1.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"name":     "Nucleus ERP API",
-			"status":   "ok",
-			"database": "ok",
-			"redis":    "ok",
-			"version":  cfg.ApiVersion,
-			"uptime_s": int(time.Since(start).Seconds()),
-			"time":     time.Now().UTC(),
-		})
-	})
-
 	// secured routes (JWT required)
 	secured := v1.Group("")
 	secured.Use(auth.AuthMiiddleware(authSvc))
@@ -228,23 +196,6 @@ func main() {
 	// POS routes
 	pos.RegisterRoutes(secured, authSvc)
 
-	// Serve Nuxt static assets (JS/CSS/images)
-	r.Static("/_nuxt", "../public/_nuxt")
-	r.StaticFile("/favicon.ico", "../public/favicon.ico")
-
-	// Serve other static assets (like images in /public)
-	r.Static("/assets", "../public/assets") // optional if you have assets
-
-	// Catch-all: serve index.html for all other routes (SPA mode)
-	r.NoRoute(func(c *gin.Context) {
-		path := c.Request.URL.Path
-		if strings.HasPrefix(path, "/api/") {
-			c.JSON(404, gin.H{"error": "API route not found"})
-			return
-		}
-		c.File("../public/index.html")
-	})
-
 	// Create server with graceful shutdown
 	serverConfig := server.Config{
 		Port:            cfg.Port,
@@ -254,25 +205,32 @@ func main() {
 	}
 
 	srv := server.New(r, dbs, serverConfig)
-
-	// Add health check endpoint
+	// Health godoc
 	// @Summary Health check
 	// @Description Check the health status of the API server
 	// @Tags health
 	// @Produce json
 	// @Success 200 {object} map[string]string "Service is healthy"
 	// @Failure 500 {object} map[string]string "Service is unhealthy"
-	// @Router /health [get]
-	r.GET("/health", func(c *gin.Context) {
+	// @Router /api/v1health [get]
+	v1.GET("/health", func(c *gin.Context) {
 		if err := srv.Health(); err != nil {
 			c.JSON(500, gin.H{"status": "unhealthy", "error": err.Error()})
 			return
 		}
-		c.JSON(200, gin.H{"status": "healthy"})
+		c.JSON(200, gin.H{
+			"name":     "Nucleus ERP API",
+			"status":   "ok",
+			"database": "ok",
+			"redis":    "ok",
+			"version":  cfg.ApiVersion,
+			"uptime_s": int(time.Since(start).Seconds()),
+			"time":     time.Now().UTC(),
+		})
 	})
 
 	// Start server with graceful shutdown
-	log.Printf("Starting Hotel ERP server version %s...", cfg.ApiVersion)
+	log.Printf("Starting Nucleus server version %s...", cfg.ApiVersion)
 	if err := srv.Start(); err != nil {
 		log.Fatalf("Server failed: %v", err)
 	}
