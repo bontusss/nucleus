@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
 	db "nucleus/db/sqlc"
 	_ "nucleus/docs/swagger"
 	"nucleus/internal/auth"
@@ -49,6 +50,7 @@ import (
 // @description JWT Authorization header using the Bearer scheme. Example: "Authorization: Bearer {token}"
 
 func main() {
+	start := time.Now()
 	// Load .env file
 	if err := godotenv.Load(); err != nil {
 		log.Fatalf("Failed to load .env file: %v", err)
@@ -180,6 +182,18 @@ func main() {
 	v1.POST("/auth/verify-email", authHandler.VerifyEmail)
 	v1.POST("/auth/forgot-password", authHandler.ForgotPassword)
 	v1.POST("/auth/reset-password", authHandler.ResetPassword)
+
+	v1.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"name":     "Nucleus ERP API",
+			"status":   "ok",
+			"database": "ok",
+			"redis":    "ok",
+			"version":  cfg.ApiVersion,
+			"uptime_s": int(time.Since(start).Seconds()),
+			"time":     time.Now().UTC(),
+		})
+	})
 
 	// secured routes (JWT required)
 	secured := v1.Group("")
