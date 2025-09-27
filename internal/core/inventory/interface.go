@@ -2,7 +2,7 @@ package inventory
 
 import (
 	"context"
-	db "herp/db/sqlc"
+	db "nucleus/db/sqlc"
 )
 
 type Querier interface {

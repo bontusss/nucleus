@@ -1,8 +1,8 @@
 version: "3.8"
 
 services:
-  herp-api:
-    container_name: herp_api
+  nucleus-api:
+    container_name: nucleus_api
     build:
       context: .
       dockerfile: Dockerfile
@@ -17,7 +17,7 @@ services:
       - postgres
       - redis
     networks:
-      - herp-network
+      - nucleus-network
     restart: unless-stopped
     stop_grace_period: 30s
     stop_signal: SIGTERM
@@ -48,10 +48,10 @@ services:
           cpus: "0.25"
 
   postgres:
-    container_name: herp_postgres
+    container_name: nucleus_postgres
     image: postgres:15-alpine
     environment:
-      POSTGRES_DB: herp_db
+      POSTGRES_DB: nucleus_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: admin
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
@@ -61,17 +61,17 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./db/init:/docker-entrypoint-initdb.d
     networks:
-      - herp-network
+      - nucleus-network
     restart: unless-stopped
     stop_grace_period: 10s
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d herp_db"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d nucleus_db"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   redis:
-    container_name: herp_redis
+    container_name: nucleus_redis
     image: redis:7-alpine
     ports:
       - "6379:6379"
@@ -79,7 +79,7 @@ services:
     volumes:
       - redis_data:/data
     networks:
-      - herp-network
+      - nucleus-network
     restart: unless-stopped
     stop_grace_period: 10s
     healthcheck:
@@ -95,7 +95,7 @@ volumes:
     driver: local
 
 networks:
-  herp-network:
+  nucleus-network:
     driver: bridge
     ipam:
       config:

@@ -4,9 +4,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	db "herp/db/sqlc"
-	"herp/internal/utils"
 	"net/http"
+	db "nucleus/db/sqlc"
+	"nucleus/internal/utils"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -42,7 +42,7 @@ func (h *AdminHandler) RegisterAdminRoutes(router *gin.RouterGroup, authSvc *Ser
 	admin.DELETE("/role/:id", h.DeleteRole)
 	admin.POST("/role/:id/permission", h.AddPermissionToRole)
 	admin.DELETE("/role/:id/permission/:permission_id", h.RemovePermissionFromRole)
-	admin.GET("/role/:id/permission", h.GetRolePermissions) 
+	admin.GET("/role/:id/permission", h.GetRolePermissions)
 }
 
 // User Management
@@ -589,7 +589,6 @@ func (h *AdminHandler) GetRolePermissions(c *gin.Context) {
 
 	utils.SuccessResponse(c, http.StatusOK, "", permissions)
 }
-
 
 // func (h *AdminHandler) GetUserActivityLogs(c *gin.Context) {
 // 	userID, err := strconv.Atoi(c.Param("id"))

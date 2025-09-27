@@ -17,7 +17,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	db "herp/db/sqlc"
+	db "nucleus/db/sqlc"
 )
 
 type Business struct {

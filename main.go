@@ -2,23 +2,23 @@ package main
 
 import (
 	"fmt"
-	db "herp/db/sqlc"
-	_ "herp/docs/swagger"
-	"herp/internal/auth"
-	"herp/internal/config"
-	"herp/internal/core/business"
-	"herp/internal/core/ilogs"
-	"herp/internal/core/inventory"
-	"herp/internal/core/store"
-	"herp/internal/docs"
-	"herp/internal/middleware"
-	"herp/internal/pos"
-	"herp/internal/server"
-	"herp/pkg/database"
-	"herp/pkg/monitoring/logging"
-	"herp/pkg/ratelimit"
-	"herp/pkg/redis"
 	"log"
+	db "nucleus/db/sqlc"
+	_ "nucleus/docs/swagger"
+	"nucleus/internal/auth"
+	"nucleus/internal/config"
+	"nucleus/internal/core/business"
+	logs "nucleus/internal/core/ilogs"
+	"nucleus/internal/core/inventory"
+	"nucleus/internal/core/store"
+	"nucleus/internal/docs"
+	"nucleus/internal/middleware"
+	"nucleus/internal/pos"
+	"nucleus/internal/server"
+	"nucleus/pkg/database"
+	"nucleus/pkg/monitoring/logging"
+	"nucleus/pkg/ratelimit"
+	"nucleus/pkg/redis"
 	"strings"
 	"time"
 
@@ -29,13 +29,13 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// @title Hotel ERP API
+// @title Nucleus ERP API
 // @version 1.0.0
-// @description This is the Hotel ERP API server. It provides endpoints for managing hotel operations including authentication, point of sale, inventory, and more.
+// @description This is the Nucleus API server. It provides endpoints for managing business operations including authentication, point of sale, inventory, and more.
 // @termsOfService http://swagger.io/terms/
 
-// @contact.name Hotel ERP API Support
-// @contact.email support@herp.com
+// @contact.name Nucleus ERP API Support
+// @contact.email support@usenucleus.com
 
 // @license.name MIT
 // @license.url https://opensource.org/licenses/MIT
@@ -213,7 +213,6 @@ func main() {
 
 	// POS routes
 	pos.RegisterRoutes(secured, authSvc)
-
 
 	// Serve Nuxt static assets (JS/CSS/images)
 	r.Static("/_nuxt", "../public/_nuxt")

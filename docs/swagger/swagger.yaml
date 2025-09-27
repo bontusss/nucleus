@@ -980,15 +980,15 @@ definitions:
 host: localhost:7000
 info:
   contact:
-    email: support@herp.com
-    name: Hotel ERP API Support
-  description: This is the Hotel ERP API server. It provides endpoints for managing
-    hotel operations including authentication, point of sale, inventory, and more.
+    email: support@usenucleus.com
+    name: Nucleus ERP API Support
+  description: This is the Nucleus API server. It provides endpoints for managing
+    business operations including authentication, point of sale, inventory, and more.
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT
   termsOfService: http://swagger.io/terms/
-  title: Hotel ERP API
+  title: Nucleus ERP API
   version: 1.0.0
 paths:
   /api/v1/admin/login-history:

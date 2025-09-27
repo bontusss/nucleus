@@ -1,9 +1,9 @@
 package logs
 
 import (
-	"herp/internal/auth"
-	"herp/internal/utils"
-	"herp/pkg/monitoring/logging"
+	"nucleus/internal/auth"
+	"nucleus/internal/utils"
+	"nucleus/pkg/monitoring/logging"
 	"time"
 
 	"github.com/gin-gonic/gin"

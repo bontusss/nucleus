@@ -1,4 +1,4 @@
-module herp
+module nucleus
 
 go 1.24.3
 

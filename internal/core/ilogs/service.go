@@ -3,7 +3,7 @@ package logs
 import (
 	"context"
 	"database/sql"
-	db "herp/db/sqlc"
+	db "nucleus/db/sqlc"
 )
 
 type Logs struct {
@@ -15,6 +15,6 @@ func NewLogs(db *sql.DB, queries Querier) *Logs {
 	return &Logs{db, queries}
 }
 
-func(l *Logs) GetActivityLogs(ctx context.Context, limit int32) ([]db.ActivityLog, error) {
+func (l *Logs) GetActivityLogs(ctx context.Context, limit int32) ([]db.ActivityLog, error) {
 	return l.queries.GetActivityLogs(ctx, limit)
 }

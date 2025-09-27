@@ -3,7 +3,7 @@ package auth
 import (
 	"context"
 	"database/sql"
-	db "herp/db/sqlc"
+	db "nucleus/db/sqlc"
 	"time"
 )
 

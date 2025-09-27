@@ -1,9 +1,9 @@
 package pos
 
 import (
-	"herp/internal/auth"
-	"herp/internal/utils"
 	"net/http"
+	"nucleus/internal/auth"
+	"nucleus/internal/utils"
 	"strconv"
 	"time"
 

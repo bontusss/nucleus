@@ -1,18 +1,18 @@
 services:
   postgres:
-    container_name: herp_postgres
+    container_name: nucleus_postgres
     image: postgres:15-alpine
     environment:
       - POSTGRES_USER=${DB_USERNAME}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
     ports:
-      - '${DB_PORT}:5432'
+      - "${DB_PORT}:5432"
 
   redis:
-    container_name: herp_redis
+    container_name: nucleus_redis
     image: redis:alpine
     ports:
-      - '${REDIS_PORT}:6379'
+      - "${REDIS_PORT}:6379"
     command: redis-server --appendonly yes
     volumes:
       - ../redis_data:/data

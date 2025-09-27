@@ -3,9 +3,9 @@ package logging
 import (
 	"bytes"
 	"encoding/json"
-	"herp/internal/config"
 	"io"
 	"log/syslog"
+	"nucleus/internal/config"
 	"time"
 
 	"github.com/gin-gonic/gin"

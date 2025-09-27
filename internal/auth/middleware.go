@@ -2,8 +2,8 @@ package auth
 
 import (
 	"errors"
-	"herp/pkg/jwt"
 	"net/http"
+	"nucleus/pkg/jwt"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -26,7 +26,7 @@ func AuthMiiddleware(authSvc *Service) gin.HandlerFunc {
 		if authHeader == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": ErrInvalidAuthHeader.Error()})
 			return
-		} 
+		}
 
 		if !strings.HasPrefix(authHeader, BearerPrefix) {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": ErrInvalidAuthHeader.Error()})

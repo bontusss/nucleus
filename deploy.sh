@@ -1,8 +1,8 @@
 #!/bin/bash
 
-APP_NAME="erp"
-BINARY_NAME="erp"
-SERVICE_NAME="erp"
+APP_NAME="nucleus"
+BINARY_NAME="nucleus"
+SERVICE_NAME="nucleus"
 
 echo "🚀 Deploying $APP_NAME..."
 

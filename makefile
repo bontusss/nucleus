@@ -1,13 +1,13 @@
 # Build the application
 build:
-	@echo "Building Hotel ERP..."
+	@echo "Building Nucleus ERP..."
 	@mkdir -p bin
 	@go build -o bin/app -ldflags="-s -w" .
 	@echo "Build completed: bin/app"
 
 # Build for production with optimizations
 build-prod:
-	@echo "Building Hotel ERP for production..."
+	@echo "Building Nucleus ERP for production..."
 	@mkdir -p bin
 	@CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-s -w -extldflags '-static'" -o bin/app .
 	@echo "Production build completed: bin/app"
@@ -95,7 +95,7 @@ db_username ?= postgres
 db_password ?= admin
 db_host ?= localhost
 db_port ?= 5431
-db_name ?= herp_db
+db_name ?= nucleus_db
 ssl_mode ?= disable
 
 # Run database migrations up to apply pending changes
@@ -126,7 +126,7 @@ s_up: #
 s_down: #
 	docker compose -f docker-compose.services.yml down
 
-container_name ?= herp_postgres
+container_name ?= nucleus_postgres
 
 # Create a new PostgreSQL database
 db_up: # database-up: create a new database

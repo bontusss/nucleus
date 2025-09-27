@@ -3,7 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
-	db "herp/db/sqlc"
+	db "nucleus/db/sqlc"
 )
 
 type Store struct {

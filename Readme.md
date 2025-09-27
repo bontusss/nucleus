@@ -44,29 +44,34 @@ The Hotel ERP API is a RESTful API that provides endpoints for managing hotel op
 ### Installation
 
 1. Clone the repository:
+
 ```bash
 git clone <repository-url>
 cd hotel-erp
 ```
 
 2. Install dependencies:
+
 ```bash
 go mod download
 ```
 
 3. Set up environment variables:
+
 ```bash
 cp .env.example .env
 # Edit .env with your configuration
 ```
 
 4. Start the services:
+
 ```bash
 make s_up  # Start PostgreSQL and Redis containers
 make m_up  # Run database migrations
 ```
 
 5. Start the API server:
+
 ```bash
 make start  # Development mode with hot reload
 # OR
@@ -74,6 +79,7 @@ make build && ./bin/app  # Production mode
 ```
 
 6. Load sample data (optional):
+
 ```bash
 ./scripts/seed_users.sh  # Load sample users for testing
 ```
@@ -117,6 +123,7 @@ Content-Type: application/json
 ```
 
 Response:
+
 ```json
 {
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
@@ -140,6 +147,7 @@ Interactive API documentation with the ability to test endpoints directly in the
 **URL**: http://localhost:7000/docs/swagger/index.html
 
 Features:
+
 - Interactive endpoint testing
 - Request/response examples
 - Schema validation
@@ -152,6 +160,7 @@ Clean, modern API documentation interface.
 **URL**: http://localhost:7000/redoc
 
 Features:
+
 - Clean, readable interface
 - Code examples in multiple languages
 - Detailed schema documentation
@@ -166,17 +175,21 @@ Raw OpenAPI specification in JSON format for integration with other tools.
 ## Available Endpoints
 
 ### Authentication
+
 - `POST /api/v1/auth/login` - User authentication
 
 ### Health Check
+
 - `GET /health` - API health status
 
 ### Point of Sale (POS)
+
 - `POST /api/v1/pos/sales` - Create a new sale
 - `GET /api/v1/pos/sales/history` - Get sales history
 - `POST /api/v1/pos/items` - Create a new item
 
 ### Documentation
+
 - `GET /docs/` - Redirect to Swagger UI
 - `GET /docs/swagger/*` - Swagger UI interface
 - `GET /redoc` - Redocly documentation
@@ -187,6 +200,7 @@ Raw OpenAPI specification in JSON format for integration with other tools.
 ### Create Sale
 
 **Request**:
+
 ```http
 POST /api/v1/pos/sales
 Authorization: Bearer <token>
@@ -207,6 +221,7 @@ Content-Type: application/json
 ```
 
 **Response**:
+
 ```json
 {
   "id": 1,
@@ -228,12 +243,14 @@ Content-Type: application/json
 ### Get Sales History
 
 **Request**:
+
 ```http
 GET /api/v1/pos/sales/history?page=1&limit=20&start_date=2024-01-01&end_date=2024-01-31
 Authorization: Bearer <token>
 ```
 
 **Response**:
+
 ```json
 {
   "sales": [
@@ -288,6 +305,7 @@ The API uses standard HTTP status codes and returns errors in the following form
 - `403 Forbidden` - Valid token but insufficient permissions
 
 Example error response:
+
 ```json
 {
   "error": "Invalid credentials"
@@ -310,58 +328,56 @@ Load sample users with a single command:
 
 The following test accounts are available after loading sample data:
 
-| Role | Username | Email | Password | Permissions |
-|------|----------|--------|----------|-------------|
-| Admin | admin | admin@hotel.com | password | Full system access |
-| Manager | manager1 | manager@hotel.com | manager123 | POS operations, booking management |
-| POS Staff | pos_staff1 | pos@hotel.com | pos123 | POS sales, view history |
-| Cashier | cashier1 | cashier@hotel.com | cashier123 | POS sales only |
-| Test User | test_user | test@hotel.com | test123 | Inactive (for testing) |
-
+| Role      | Username   | Email             | Password   | Permissions                        |
+| --------- | ---------- | ----------------- | ---------- | ---------------------------------- |
+| Admin     | admin      | admin@hotel.com   | password   | Full system access                 |
+| Manager   | manager1   | manager@hotel.com | manager123 | POS operations, booking management |
+| POS Staff | pos_staff1 | pos@hotel.com     | pos123     | POS sales, view history            |
+| Cashier   | cashier1   | cashier@hotel.com | cashier123 | POS sales only                     |
+| Test User | test_user  | test@hotel.com    | test123    | Inactive (for testing)             |
 
 ### Comprehenive Permissions list
 
-| Permission              | Description                        |
-|--------------------------|------------------------------------|
-| **Admin**               |                                    |
-| `admin:manage`          | Manage admin settings              |
-| **Sales**               |                                    |
-| `pos:sell`              | Create new sales in POS            |
-| `sale:view`             | View sales history in POS          |
-| `sale:manage_items`     | Manage POS items                   |
-| `sale:create`           | Create new sales                   |
-| `sale:update`           | Update sales                       |
-| `sale:delete`           | Delete sales                       |
-| `sale:cancel`           | Cancel sales                       |
-| `sale:refund`           | Refund sales                       |
-| `sale:print`            | Print sales receipts               |
-| **Inventory**           |                                    |
-| `item:create`           | Create new inventory items         |
-| `item:update`           | Update inventory items             |
-| `item:delete`           | Delete inventory items             |
-| `item:view`             | View inventory items               |
-| `item_request:create`   | Create new inventory item requests |
-| `item_request:update`   | Update inventory item requests     |
-| `item_request:delete`   | Delete inventory item requests     |
-| `item_request:view`     | View inventory item requests       |
-| `item_request:approve`  | Approve inventory item requests    |
-| `item_request:reject`   | Reject inventory item requests     |
-| **Users**               |                                    |
-| `user:create`           | Create new users                   |
-| `user:update`           | Update user information            |
-| `user:delete`           | Delete users                       |
-| `user:view`             | View user information              |
-| **Role**                |                                    |
-| `role:create`           | Create new roles                   |
-| `role:update`           | Update role information            |
-| `role:delete`           | Delete roles                       |
-| `role:view`             | View role information              |
-| **General settings**    |                                    |
-| `setting:create`        | Create new settings                |
-| `setting:update`        | Update settings                    |
-| `setting:delete`        | Delete settings                    |
-| `setting:view`          | View settings                      |
-
+| Permission             | Description                        |
+| ---------------------- | ---------------------------------- |
+| **Admin**              |                                    |
+| `admin:manage`         | Manage admin settings              |
+| **Sales**              |                                    |
+| `pos:sell`             | Create new sales in POS            |
+| `sale:view`            | View sales history in POS          |
+| `sale:manage_items`    | Manage POS items                   |
+| `sale:create`          | Create new sales                   |
+| `sale:update`          | Update sales                       |
+| `sale:delete`          | Delete sales                       |
+| `sale:cancel`          | Cancel sales                       |
+| `sale:refund`          | Refund sales                       |
+| `sale:print`           | Print sales receipts               |
+| **Inventory**          |                                    |
+| `item:create`          | Create new inventory items         |
+| `item:update`          | Update inventory items             |
+| `item:delete`          | Delete inventory items             |
+| `item:view`            | View inventory items               |
+| `item_request:create`  | Create new inventory item requests |
+| `item_request:update`  | Update inventory item requests     |
+| `item_request:delete`  | Delete inventory item requests     |
+| `item_request:view`    | View inventory item requests       |
+| `item_request:approve` | Approve inventory item requests    |
+| `item_request:reject`  | Reject inventory item requests     |
+| **Users**              |                                    |
+| `user:create`          | Create new users                   |
+| `user:update`          | Update user information            |
+| `user:delete`          | Delete users                       |
+| `user:view`            | View user information              |
+| **Role**               |                                    |
+| `role:create`          | Create new roles                   |
+| `role:update`          | Update role information            |
+| `role:delete`          | Delete roles                       |
+| `role:view`            | View role information              |
+| **General settings**   |                                    |
+| `setting:create`       | Create new settings                |
+| `setting:update`       | Update settings                    |
+| `setting:delete`       | Delete settings                    |
+| `setting:view`         | View settings                      |
 
 ### Testing Authentication
 
@@ -389,7 +405,7 @@ curl -X POST http://localhost:9000/api/auth/login \
 If you prefer manual setup, you can run the SQL file directly:
 
 ```bash
-psql -h localhost -p 5431 -U postgres -d herp_db -f db/seed_users.sql
+psql -h localhost -p 5431 -U postgres -d nucleus_db -f db/seed_users.sql
 ```
 
 ### Environment Variables
@@ -399,7 +415,7 @@ The seed script supports custom database connection parameters:
 ```bash
 export DB_HOST="localhost"
 export DB_PORT="5431"
-export DB_NAME="herp_db"
+export DB_NAME="nucleus_db"
 export DB_USER="postgres"
 export DB_PASSWORD="admin"
 ```
@@ -415,6 +431,7 @@ For detailed information about sample data, see [docs/SAMPLE_DATA.md](docs/SAMPL
 ### Adding New Endpoints
 
 1. **Create handler functions** with proper Swagger annotations:
+
 ```go
 // CreateUser godoc
 // @Summary Create user
@@ -434,6 +451,7 @@ func CreateUser(c *gin.Context) {
 
 2. **Register routes** in the appropriate package
 3. **Update documentation** by running:
+
 ```bash
 make docs-generate
 ```
@@ -500,16 +518,19 @@ API_VERSION=1.0.0
 ### Production Deployment
 
 1. **Build the application**:
+
 ```bash
 make build-prod
 ```
 
 2. **Deploy using the deployment script**:
+
 ```bash
 ./scripts/deploy.sh deploy
 ```
 
 3. **Access documentation**:
+
 - Production: https://api.hotel-erp.com/docs/swagger/index.html
 - Staging: https://staging-api.hotel-erp.com/docs/swagger/index.html
 
@@ -530,6 +551,7 @@ docker-compose up -d
 For production deployments:
 
 1. **Disable documentation** in production if not needed:
+
 ```bash
 DOCS_ENABLED=false
 ```

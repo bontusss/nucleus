@@ -3,11 +3,11 @@ package store
 import (
 	"database/sql"
 	"fmt"
-	db "herp/db/sqlc"
-	"herp/internal/auth"
-	"herp/internal/utils"
-	"herp/pkg/jwt"
-	"herp/pkg/monitoring/logging"
+	db "nucleus/db/sqlc"
+	"nucleus/internal/auth"
+	"nucleus/internal/utils"
+	"nucleus/pkg/jwt"
+	"nucleus/pkg/monitoring/logging"
 
 	"github.com/gin-gonic/gin"
 	"github.com/lib/pq"

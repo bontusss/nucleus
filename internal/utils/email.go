@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"herp/internal/config"
+	"nucleus/internal/config"
 
 	"io"
 	"math/rand"
@@ -27,11 +27,10 @@ type EmailRequest struct {
 
 // GenerateOTP generates a 7-digit numeric OTP
 func GenerateOTP() string {
-    rand.Seed(time.Now().UnixNano()) 
-    otp := rand.Intn(9000000) + 1000000 
-    return fmt.Sprintf("%07d", otp)
+	rand.Seed(time.Now().UnixNano())
+	otp := rand.Intn(9000000) + 1000000
+	return fmt.Sprintf("%07d", otp)
 }
-
 
 // RenderEmailTemplate parses and executes an HTML template with the provided data.
 func RenderEmailTemplate(templatePath string, data any) (string, error) {

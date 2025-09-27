@@ -3,12 +3,12 @@ package auth
 import (
 	"errors"
 	"fmt"
-	"herp/internal/config"
-	"herp/internal/utils"
-	"herp/pkg/jwt"
-	"herp/pkg/monitoring/logging"
 	"log"
 	"net/http"
+	"nucleus/internal/config"
+	"nucleus/internal/utils"
+	"nucleus/pkg/jwt"
+	"nucleus/pkg/monitoring/logging"
 	"strings"
 	"time"
 

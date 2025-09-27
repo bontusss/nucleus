@@ -11,8 +11,8 @@ const docTemplate = `{
         "title": "{{.Title}}",
         "termsOfService": "http://swagger.io/terms/",
         "contact": {
-            "name": "Hotel ERP API Support",
-            "email": "support@herp.com"
+            "name": "Nucleus ERP API Support",
+            "email": "support@usenucleus.com"
         },
         "license": {
             "name": "MIT",
@@ -3487,8 +3487,8 @@ var SwaggerInfo = &swag.Spec{
 	Host:             "localhost:7000",
 	BasePath:         "/api",
 	Schemes:          []string{},
-	Title:            "Hotel ERP API",
-	Description:      "This is the Hotel ERP API server. It provides endpoints for managing hotel operations including authentication, point of sale, inventory, and more.",
+	Title:            "Nucleus ERP API",
+	Description:      "This is the Nucleus API server. It provides endpoints for managing business operations including authentication, point of sale, inventory, and more.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",
