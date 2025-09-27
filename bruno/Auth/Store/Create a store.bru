@@ -1,0 +1,30 @@
+meta {
+  name: Create a store
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseURI}}store
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "branch_id": 1,
+    "name": "Test store",
+    "address": "test store address",
+    "phone": "1234567890",
+    "email": "testemail@test.com",
+    "store_code": "STRTEST"
+  }
+}
+
+settings {
+  encodeUrl: true
+}

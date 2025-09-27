@@ -1,0 +1,19 @@
+meta {
+  name: Get business
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseURI}}business/9
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+settings {
+  encodeUrl: true
+}

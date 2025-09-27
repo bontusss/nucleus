@@ -1,0 +1,26 @@
+meta {
+  name: Create a business
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseURI}}business
+  body: multipartForm
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:multipart-form {
+  name: Bine Hotels
+  country: Nigeria
+  logo: @file(/home/bontus/Downloads/logo.jpg)
+  metadata: {"industry":"hospitality","tier":"gold","founded":2024}
+}
+
+settings {
+  encodeUrl: true
+}

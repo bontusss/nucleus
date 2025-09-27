@@ -1,0 +1,27 @@
+meta {
+  name: Create item
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseURI}}inventory/item
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "name": "Shoes",
+    "category_id": 1,
+    "brand_id": 1
+  }
+}
+
+settings {
+  encodeUrl: true
+}

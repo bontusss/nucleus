@@ -1,0 +1,19 @@
+meta {
+  name: Get logs
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseURI}}logs
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+settings {
+  encodeUrl: true
+}

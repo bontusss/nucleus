@@ -1,0 +1,23 @@
+meta {
+  name: Update user
+  type: http
+  seq: 1
+}
+
+put {
+  url: {{baseURI}}admin/user/6
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {"first_name": "NewLast" }
+}
+
+settings {
+  encodeUrl: true
+}

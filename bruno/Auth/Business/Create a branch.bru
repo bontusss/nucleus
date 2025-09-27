@@ -1,0 +1,29 @@
+meta {
+  name: Create a branch
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseURI}}business/branch
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "name": "Main22 branch",
+    "country": "Nigeria",
+    "business_id": 6,
+    "address_one": "23 Haba road",
+    "metadata": {"industry":"hospitality","tier":"gold","founded":2024}
+  }
+}
+
+settings {
+  encodeUrl: true
+}

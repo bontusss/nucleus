@@ -1,0 +1,25 @@
+meta {
+  name: Refresh token
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseURI}}auth/refresh
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "refreshToken": "1cd026dab7a6beb520cecc4e5963d2d962bd39f14bb9824492b88e9bbb9a0838"
+  }
+}
+
+settings {
+  encodeUrl: true
+}

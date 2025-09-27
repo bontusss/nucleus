@@ -1,0 +1,2341 @@
+basePath: /api
+definitions:
+  auth.BadRequestResponse:
+    properties:
+      error:
+        description: Error message
+        example: Bad request
+        type: string
+    type: object
+  auth.CreateRoleRequest:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  auth.CreateUserRequest:
+    properties:
+      email:
+        type: string
+      first_name:
+        minLength: 2
+        type: string
+      gender:
+        enum:
+        - male
+        - female
+        type: string
+      is_active:
+        type: boolean
+      last_name:
+        minLength: 2
+        type: string
+      password:
+        minLength: 4
+        type: string
+      role_id:
+        type: integer
+      username:
+        minLength: 3
+        type: string
+    required:
+    - email
+    - first_name
+    - gender
+    - is_active
+    - last_name
+    - password
+    - role_id
+    - username
+    type: object
+  auth.ForgotPasswordRequest:
+    properties:
+      email:
+        description: User email address
+        example: user@example.com
+        type: string
+    required:
+    - email
+    type: object
+  auth.InternalServerErrorResponse:
+    properties:
+      error:
+        description: Error message
+        example: Internal server error
+        type: string
+    type: object
+  auth.LoginRequest:
+    description: Login request payload
+    properties:
+      email:
+        description: Email for authentication (optional if username provided)
+        example: admin@hotel.com
+        type: string
+      password:
+        description: Password for authentication
+        example: password123
+        type: string
+      username:
+        description: Username for authentication (optional if email provided)
+        example: admin
+        type: string
+    required:
+    - password
+    type: object
+  auth.LoginResponse:
+    description: Login response payload
+    properties:
+      expired_at:
+        description: Token expiration timestamp in seconds
+        example: 1700000000
+        type: integer
+      refresh_token:
+        description: JWT refresh token
+        example: dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4...
+        type: string
+      token:
+        description: JWT authentication token
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+    type: object
+  auth.ManageRolePermissionRequest:
+    properties:
+      permission_id:
+        example: 1
+        type: integer
+    required:
+    - permission_id
+    type: object
+  auth.RefreshRequest:
+    properties:
+      refreshToken:
+        description: JWT refresh token
+        example: dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4...
+        type: string
+    required:
+    - refreshToken
+    type: object
+  auth.RefreshResponse:
+    properties:
+      accessToken:
+        description: JWT authentication token
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+      expiresIn:
+        description: Token expiration in seconds
+        example: 3600
+        type: integer
+      refreshToken:
+        description: JWT refresh token
+        example: dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4...
+        type: string
+    type: object
+  auth.RegisterAdminRequest:
+    description: Register admin request payload
+    properties:
+      email:
+        type: string
+      first_name:
+        minLength: 2
+        type: string
+      last_name:
+        minLength: 2
+        type: string
+      password:
+        minLength: 8
+        type: string
+      username:
+        minLength: 3
+        type: string
+    required:
+    - email
+    - first_name
+    - last_name
+    - password
+    - username
+    type: object
+  auth.RegisterResponse:
+    properties:
+      created_at:
+        example: "2021-01-01T00:00:00Z"
+        type: string
+      email:
+        example: admin@hotel.com
+        type: string
+      first_name:
+        example: Admin
+        type: string
+      id:
+        example: 1
+        type: integer
+      is_active:
+        example: true
+        type: boolean
+      is_email_verified:
+        example: true
+        type: boolean
+      last_name:
+        example: Admin
+        type: string
+      role_id:
+        example: 1
+        type: integer
+      updated_at:
+        example: "2021-01-01T00:00:00Z"
+        type: string
+      username:
+        example: admin
+        type: string
+    type: object
+  auth.ResetAdminPasswordRequest:
+    properties:
+      code:
+        description: Password reset code
+        example: "1234567"
+        type: string
+      email:
+        description: Admin email address
+        example: admin@example.com
+        type: string
+      new_password:
+        example: NewPassword123
+        minLength: 8
+        type: string
+    required:
+    - code
+    - email
+    - new_password
+    type: object
+  auth.ResetPasswordRequest:
+    properties:
+      new_password:
+        minLength: 8
+        type: string
+    required:
+    - new_password
+    type: object
+  auth.UnauthorizedResponse:
+    properties:
+      error:
+        description: Error message
+        example: Unauthorized
+        type: string
+    type: object
+  auth.UpdateRoleRequest:
+    properties:
+      description:
+        example: Manages daily operations
+        type: string
+      name:
+        example: Manager
+        type: string
+    required:
+    - name
+    type: object
+  auth.UpdateUserRequest:
+    properties:
+      email:
+        example: johndoe@email.com
+        type: string
+      first_name:
+        example: John
+        minLength: 2
+        type: string
+      gender:
+        enum:
+        - male
+        - female
+        example: male
+        type: string
+      is_active:
+        example: true
+        type: boolean
+      last_name:
+        example: Doe
+        minLength: 2
+        type: string
+      role_id:
+        example: 2
+        type: integer
+      username:
+        example: johndoe
+        minLength: 3
+        type: string
+    type: object
+  auth.VerifyEmailRequest:
+    description: verify email request payload
+    properties:
+      code:
+        type: string
+      email:
+        type: string
+    required:
+    - code
+    - email
+    type: object
+  business.BusinessResponse:
+    properties:
+      allow_overselling:
+        example: false
+        type: boolean
+      country:
+        example: Nigeria
+        type: string
+      created_at:
+        type: string
+      currency:
+        example: NGN
+        type: string
+      email:
+        example: admin@palmwinexpress.com
+        type: string
+      font:
+        type: string
+      id:
+        type: integer
+      language:
+        example: en
+        type: string
+      logo_url:
+        example: https://imgur.com/234343
+        type: string
+      low_stock_threshold:
+        example: 5
+        type: integer
+      metadata:
+        additionalProperties: {}
+        type: object
+      motto:
+        type: string
+      name:
+        example: Palmwineexpress hotels
+        type: string
+      primary_color:
+        type: string
+      rounding:
+        example: nearest
+        type: string
+      tax_id:
+        example: "123456789"
+        type: string
+      tax_rate:
+        example: "12"
+        type: string
+      timezone:
+        example: UTC +1
+        type: string
+      updated_at:
+        type: string
+      website:
+        example: https://palmwinexpress.com
+        type: string
+    required:
+    - name
+    type: object
+  business.CreateBranchRequest:
+    properties:
+      addres_two:
+        example: 1 Plamwine express
+        type: string
+      address_one:
+        example: '...'
+        type: string
+      business_id:
+        example: 2
+        type: integer
+      city:
+        example: aba
+        type: string
+      country:
+        example: Nigeria
+        type: string
+      email:
+        example: admin.mainbranch@gmail.com
+        type: string
+      metadata:
+        additionalProperties: {}
+        type: object
+      name:
+        example: Main branch
+        type: string
+      phone:
+        example: "+2349028378964"
+        type: string
+      state:
+        example: abia
+        type: string
+      website:
+        example: https://
+        type: string
+      zip_code:
+        example: '...'
+        type: string
+    required:
+    - address_one
+    - business_id
+    - country
+    - name
+    type: object
+  business.CreateBranchResponse:
+    properties:
+      addres_two:
+        example: 1 Plamwine express
+        type: string
+      address_one:
+        example: '...'
+        type: string
+      business_id:
+        example: 2
+        type: integer
+      city:
+        example: aba
+        type: string
+      country:
+        example: Nigeria
+        type: string
+      email:
+        example: ""
+        type: string
+      id:
+        type: integer
+      metadata:
+        additionalProperties: {}
+        type: object
+      name:
+        example: Main branch
+        type: string
+      phone:
+        example: "+2349028378964"
+        type: string
+      state:
+        example: abia
+        type: string
+      website:
+        example: https://
+        type: string
+      zip_code:
+        example: '...'
+        type: string
+    required:
+    - address_one
+    - business_id
+    - country
+    - name
+    type: object
+  business.ListBusinessResponse:
+    properties:
+      allow_overselling:
+        type: boolean
+      country:
+        type: string
+      created_at:
+        type: string
+      currency:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      language:
+        type: string
+      logo_url:
+        type: string
+      low_stock_threshold:
+        type: integer
+      metadata:
+        additionalProperties: {}
+        type: object
+      motto:
+        type: string
+      name:
+        type: string
+      rounding:
+        type: string
+      tax_id:
+        type: string
+      tax_rate:
+        type: string
+      timezone:
+        type: string
+      updated_at:
+        type: string
+      website:
+        type: string
+    type: object
+  business.Supplier:
+    properties:
+      address:
+        type: string
+      business_id:
+        type: integer
+      email:
+        type: string
+      id:
+        type: integer
+      metadata:
+        additionalProperties: {}
+        type: object
+      name:
+        example: '...'
+        type: string
+      phone:
+        type: string
+    required:
+    - name
+    type: object
+  business.UpdateBranchRequest:
+    properties:
+      addres_two:
+        example: 1 Plamwine express
+        type: string
+      address_one:
+        example: '...'
+        type: string
+      city:
+        example: aba
+        type: string
+      country:
+        example: Nigeria
+        type: string
+      email:
+        example: ""
+        type: string
+      name:
+        example: Main branch
+        type: string
+      phone:
+        example: "+2349028378964"
+        type: string
+      state:
+        example: abia
+        type: string
+      website:
+        example: https://
+        type: string
+      zip_code:
+        example: '...'
+        type: string
+    required:
+    - address_one
+    - country
+    - name
+    type: object
+  business.UpdateBusinessRequest:
+    properties:
+      allow_overselling:
+        type: boolean
+      country:
+        type: string
+      currency:
+        type: string
+      email:
+        type: string
+      language:
+        type: string
+      logo_url:
+        type: string
+      low_stock_threshold:
+        type: integer
+      metadata:
+        additionalProperties: {}
+        type: object
+      motto:
+        type: string
+      name:
+        type: string
+      rounding:
+        type: string
+      tax_id:
+        type: string
+      tax_rate:
+        type: string
+      timezone:
+        type: string
+      website:
+        type: string
+    type: object
+  business.UpdateBusinessResponse:
+    properties:
+      allow_overselling:
+        type: boolean
+      country:
+        type: string
+      currency:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      language:
+        type: string
+      logo_url:
+        type: string
+      low_stock_threshold:
+        type: integer
+      metadata:
+        additionalProperties: {}
+        type: object
+      motto:
+        type: string
+      name:
+        type: string
+      rounding:
+        type: string
+      tax_id:
+        type: string
+      tax_rate:
+        type: string
+      timezone:
+        type: string
+      website:
+        type: string
+    type: object
+  inventory.Category:
+    properties:
+      description:
+        type: string
+      is_active:
+        default: true
+        example: true
+        type: boolean
+      name:
+        type: string
+      parent_id:
+        type: integer
+    required:
+    - name
+    type: object
+  inventory.CategoryResponse:
+    properties:
+      description:
+        type: string
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      name:
+        type: string
+      parent_id:
+        type: integer
+    type: object
+  inventory.CreateBrandResponse:
+    properties:
+      description:
+        example: '...'
+        type: string
+      id:
+        type: integer
+      is_active:
+        example: true
+        type: boolean
+      logo:
+        type: string
+      name:
+        example: Coca-Cola
+        type: string
+    type: object
+  inventory.UnitRequest:
+    properties:
+      name:
+        example: kg
+        type: string
+      short_code:
+        type: string
+    required:
+    - name
+    type: object
+  inventory.UnitResponse:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+      short_code:
+        type: string
+    type: object
+  inventory.VariationRequest:
+    properties:
+      barcode:
+        example: '...'
+        type: string
+      base_price:
+        example: "10.99"
+        type: string
+      color:
+        example: 1
+        type: integer
+      is_active:
+        default: true
+        type: boolean
+      is_default:
+        default: false
+        example: false
+        type: boolean
+      item_id:
+        example: 1
+        type: integer
+      name:
+        example: '....'
+        type: string
+      reorder_level:
+        default: 5
+        example: 5
+        type: integer
+      size:
+        example: xl
+        type: string
+      sku:
+        example: GTR30l
+        type: string
+      unit_id:
+        example: 1
+        type: integer
+    required:
+    - base_price
+    - item_id
+    - name
+    - unit_id
+    type: object
+  inventory.VariationResponse:
+    properties:
+      barcode:
+        type: string
+      base_price:
+        type: string
+      color_id:
+        type: integer
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      item_id:
+        type: integer
+      name:
+        type: string
+      reorder_level:
+        type: integer
+      size:
+        type: string
+      sku:
+        type: string
+      unit_id:
+        type: integer
+    type: object
+  logs.LogsResponse:
+    properties:
+      action:
+        type: string
+      created_at:
+        type: string
+      details:
+        type: string
+      entity_id:
+        type: integer
+      entity_type:
+        type: string
+      id:
+        type: integer
+      ip_address:
+        type: string
+      user_agent:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  pos.CreateItemRequest:
+    description: Create item request payload
+    properties:
+      category:
+        description: Item category
+        example: Room Service
+        type: string
+      description:
+        description: Item description
+        example: 24-hour room service with premium menu
+        type: string
+      name:
+        description: Item name
+        example: Deluxe Room Service
+        type: string
+      price:
+        description: Item price
+        example: 45.99
+        type: number
+      sku:
+        description: Item SKU
+        example: RS-DELUXE-001
+        type: string
+      stock_quantity:
+        description: Stock quantity
+        example: 100
+        type: integer
+    required:
+    - category
+    - name
+    - price
+    type: object
+  pos.CreateSaleRequest:
+    description: Create sale request payload
+    properties:
+      customer_id:
+        description: Customer ID
+        example: 1
+        type: integer
+      discount:
+        description: Discount amount
+        example: 10.5
+        type: number
+      items:
+        description: List of items in the sale
+        items:
+          $ref: '#/definitions/pos.SaleItem'
+        type: array
+      tax_rate:
+        description: Tax rate percentage
+        example: 8.25
+        type: number
+    required:
+    - customer_id
+    - items
+    type: object
+  pos.ErrorResponse:
+    description: Error response payload
+    properties:
+      error:
+        description: Error message
+        example: Invalid request
+        type: string
+    type: object
+  pos.ItemResponse:
+    description: Item response payload
+    properties:
+      category:
+        description: Item category
+        example: Room Service
+        type: string
+      created_at:
+        description: Item creation timestamp
+        example: "2024-01-15T10:30:00Z"
+        type: string
+      description:
+        description: Item description
+        example: 24-hour room service with premium menu
+        type: string
+      id:
+        description: Item ID
+        example: 1
+        type: integer
+      name:
+        description: Item name
+        example: Deluxe Room Service
+        type: string
+      price:
+        description: Item price
+        example: 45.99
+        type: number
+      sku:
+        description: Item SKU
+        example: RS-DELUXE-001
+        type: string
+      stock_quantity:
+        description: Stock quantity
+        example: 100
+        type: integer
+      updated_at:
+        description: Item last update timestamp
+        example: "2024-01-15T10:30:00Z"
+        type: string
+    type: object
+  pos.PaginationResponse:
+    description: Pagination response payload
+    properties:
+      limit:
+        description: Number of items per page
+        example: 20
+        type: integer
+      page:
+        description: Current page number
+        example: 1
+        type: integer
+      pages:
+        description: Total number of pages
+        example: 5
+        type: integer
+      total:
+        description: Total number of items
+        example: 100
+        type: integer
+    type: object
+  pos.SaleItem:
+    description: Sale item details
+    properties:
+      item_id:
+        description: Item ID
+        example: 1
+        type: integer
+      price:
+        description: Price per unit
+        example: 25.99
+        type: number
+      quantity:
+        description: Quantity of the item
+        example: 2
+        type: integer
+    required:
+    - item_id
+    - price
+    - quantity
+    type: object
+  pos.SaleResponse:
+    description: Sale response payload
+    properties:
+      created_at:
+        description: Sale creation timestamp
+        example: "2024-01-15T10:30:00Z"
+        type: string
+      customer_id:
+        description: Customer ID
+        example: 1
+        type: integer
+      discount_amount:
+        description: Discount amount
+        example: 10.5
+        type: number
+      id:
+        description: Sale ID
+        example: 1
+        type: integer
+      items:
+        description: List of items in the sale
+        items:
+          $ref: '#/definitions/pos.SaleItem'
+        type: array
+      tax_amount:
+        description: Tax amount
+        example: 4.27
+        type: number
+      total_amount:
+        description: Total amount after tax and discount
+        example: 56.23
+        type: number
+    type: object
+  pos.SalesHistoryResponse:
+    description: Sales history response payload
+    properties:
+      pagination:
+        allOf:
+        - $ref: '#/definitions/pos.PaginationResponse'
+        description: Pagination information
+      sales:
+        description: List of sales
+        items:
+          $ref: '#/definitions/pos.SaleResponse'
+        type: array
+    type: object
+  store.storeParams:
+    properties:
+      address:
+        example: 123 Main St, Cityville
+        type: string
+      assigned_manager:
+        example: 1
+        type: integer
+      assigned_user:
+        example: 1
+        type: integer
+      branch_id:
+        example: 1
+        type: integer
+      description:
+        type: string
+      email:
+        example: ""
+        type: string
+      is_active:
+        example: true
+        type: boolean
+      is_central:
+        example: false
+        type: boolean
+      name:
+        example: Main Street Store
+        type: string
+      phone:
+        example: "+1234567890"
+        type: string
+      store_code:
+        example: STR001
+        type: string
+    required:
+    - address
+    - branch_id
+    - email
+    - name
+    - phone
+    - store_code
+    type: object
+host: localhost:7000
+info:
+  contact:
+    email: support@herp.com
+    name: Hotel ERP API Support
+  description: This is the Hotel ERP API server. It provides endpoints for managing
+    hotel operations including authentication, point of sale, inventory, and more.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: Hotel ERP API
+  version: 1.0.0
+paths:
+  /api/v1/admin/login-history:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve login history for all users
+      parameters:
+      - description: Maximum number of logs to return (default 100, max 1000)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get login history
+      tags:
+      - admin
+  /api/v1/admin/roles:
+    get:
+      description: Get a list of all roles in the system
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of roles
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all roles
+      tags:
+      - admin
+    post:
+      consumes:
+      - application/json
+      description: Create a new role in the system
+      parameters:
+      - description: Role creation data
+        in: body
+        name: role
+        required: true
+        schema:
+          $ref: '#/definitions/auth.CreateRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Role created successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new role
+      tags:
+      - admin
+  /api/v1/admin/roles/{id}:
+    delete:
+      description: Delete a role from the system
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: Role deleted successfully
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete role
+      tags:
+      - admin
+    get:
+      description: Get detailed information about a specific role
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Role details
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Role not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get role by ID
+      tags:
+      - admin
+    put:
+      consumes:
+      - application/json
+      description: Update role information
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Role update data
+        in: body
+        name: role
+        required: true
+        schema:
+          $ref: '#/definitions/auth.UpdateRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Role updated successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update role
+      tags:
+      - admin
+  /api/v1/admin/roles/{id}/permission:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve permissions for a specific role
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get role permissions
+      tags:
+      - admin
+    post:
+      consumes:
+      - application/json
+      description: Add a permission to a specific role
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Permission ID
+        in: body
+        name: permission_id
+        required: true
+        schema:
+          $ref: '#/definitions/auth.ManageRolePermissionRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Permission added to role
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Add permission to role
+      tags:
+      - admin
+  /api/v1/admin/roles/{id}/permission/{permission_id}:
+    delete:
+      consumes:
+      - application/json
+      description: Remove a permission from a specific role
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Permission ID
+        in: path
+        name: permission_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Permission removed from role
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Remove permission from role
+      tags:
+      - admin
+  /api/v1/admin/users:
+    get:
+      description: Get a list of all users in the system
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of users
+          schema:
+            items:
+              additionalProperties: true
+              type: object
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all users
+      tags:
+      - admin
+    post:
+      consumes:
+      - application/json
+      description: Create a new user account with role assignment
+      parameters:
+      - description: User creation data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/auth.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: User created successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new user
+      tags:
+      - admin
+  /api/v1/admin/users/{id}:
+    delete:
+      description: Delete a user account from the system
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: User deleted successfully
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete user
+      tags:
+      - admin
+    get:
+      description: Get detailed information about a specific user
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User details
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get user by ID
+      tags:
+      - admin
+    put:
+      consumes:
+      - application/json
+      description: Update user account information and settings
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: User update data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/auth.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User updated successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update user information
+      tags:
+      - admin
+  /api/v1/admin/users/{id}/reset-password:
+    post:
+      consumes:
+      - application/json
+      description: Reset password for a specific user
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: New password data
+        in: body
+        name: password
+        required: true
+        schema:
+          $ref: '#/definitions/auth.ResetPasswordRequest'
+      responses:
+        "204":
+          description: Password reset successfully
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Reset user password
+      tags:
+      - admin
+  /api/v1/auth/forgot-password:
+    post:
+      consumes:
+      - application/json
+      description: Initiate password reset by sending a reset code to the user's email
+      parameters:
+      - description: Forgot Password Request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.ForgotPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Reset code sent to email
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/auth.BadRequestResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/auth.UnauthorizedResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/auth.InternalServerErrorResponse'
+      summary: Forgot Password
+      tags:
+      - auth
+  /api/v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user with email or username and return JWT token
+      parameters:
+      - description: Login credentials (email or username)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Login successful
+          schema:
+            $ref: '#/definitions/auth.LoginResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/auth.BadRequestResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/auth.UnauthorizedResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/auth.InternalServerErrorResponse'
+      summary: User login
+      tags:
+      - auth
+  /api/v1/auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Logout user and invalidate JWT token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Logout successful
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/auth.BadRequestResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/auth.UnauthorizedResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/auth.InternalServerErrorResponse'
+      summary: User logout
+      tags:
+      - auth
+  /api/v1/auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Refresh JWT token using a valid refresh token
+      parameters:
+      - description: Refresh token request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Token refreshed successfully
+          schema:
+            $ref: '#/definitions/auth.RefreshResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/auth.BadRequestResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/auth.UnauthorizedResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/auth.InternalServerErrorResponse'
+      summary: Refresh JWT token
+      tags:
+      - auth
+  /api/v1/auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Create admin with email, username, password and return JWT token
+      parameters:
+      - description: Register credentials (email, username and password)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.RegisterAdminRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Registration successful
+          schema:
+            $ref: '#/definitions/auth.RegisterResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/auth.BadRequestResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/auth.UnauthorizedResponse'
+        "500":
+          description: Unable to send email at this time, request a new verification
+            code for example@email.com
+          schema:
+            type: string
+      summary: Admin Register
+      tags:
+      - auth
+  /api/v1/auth/reset-password:
+    post:
+      consumes:
+      - application/json
+      description: Reset password using email, reset code, and new password
+      parameters:
+      - description: Reset Password Request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.ResetAdminPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Password reset successful
+        "400":
+          description: Bad request or invalid code
+          schema:
+            $ref: '#/definitions/auth.BadRequestResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/auth.UnauthorizedResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/auth.InternalServerErrorResponse'
+      summary: Reset Password
+      tags:
+      - auth
+  /api/v1/auth/verify-email:
+    post:
+      consumes:
+      - application/json
+      description: Verify admin email with email and code
+      parameters:
+      - description: Verify Email Request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.VerifyEmailRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Email verified successfully
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/auth.BadRequestResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/auth.UnauthorizedResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/auth.InternalServerErrorResponse'
+      summary: Verify Admin Email
+      tags:
+      - auth
+  /api/v1/business:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of businesses
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/business.ListBusinessResponse'
+            type: array
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Get a list of businesses
+      tags:
+      - business
+    post:
+      consumes:
+      - multipart/form-data
+      description: Create a new business with optional logo upload.
+      parameters:
+      - description: Business name
+        in: formData
+        name: name
+        required: true
+        type: string
+      - description: Business email
+        in: formData
+        name: email
+        type: string
+      - description: Business website
+        in: formData
+        name: website
+        type: string
+      - description: Tax ID
+        in: formData
+        name: tax_id
+        type: string
+      - description: Tax Rate
+        in: formData
+        name: tax_rate
+        type: string
+      - description: Currency code (e.g. NGN)
+        in: formData
+        name: currency
+        type: string
+      - description: Timezone (e.g. UTC+1)
+        in: formData
+        name: timezone
+        type: string
+      - description: Country
+        in: formData
+        name: country
+        type: string
+      - collectionFormat: csv
+        description: Accepted payment types (e.g. cash,pos,room_charge,transfer)
+        in: formData
+        items:
+          type: string
+        name: payment_type
+        type: array
+      - description: Low stock threshold
+        in: formData
+        name: low_stock_threshold
+        type: integer
+      - description: Allow overselling
+        in: formData
+        name: allow_overselling
+        type: boolean
+      - description: Business motto
+        in: formData
+        name: motto
+        type: string
+      - description: Rounding method (e.g. nearest, up, down)
+        in: formData
+        name: rounding
+        type: string
+      - description: Language (e.g. en, fr, es)
+        in: formData
+        name: language
+        type: string
+      - description: Business logo (JPG/PNG, max 2MB)
+        in: formData
+        name: logo
+        type: file
+      - description: custom data
+        in: formData
+        name: metadata
+        type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/business.BusinessResponse'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Create a business
+      tags:
+      - business
+  /api/v1/business/:id:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a new business
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: business deleted
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Delete business
+      tags:
+      - business
+    get:
+      consumes:
+      - application/json
+      description: Fetch a branch.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: fetch a branch
+      tags:
+      - business
+  /api/v1/business/branch:
+    post:
+      consumes:
+      - application/json
+      description: Delete a branch.
+      parameters:
+      - description: Branch details
+        in: body
+        name: business
+        required: true
+        schema:
+          $ref: '#/definitions/business.CreateBranchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/business.CreateBranchResponse'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Delete a branch
+      tags:
+      - business
+  /api/v1/business/branch/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Update a branch
+      parameters:
+      - description: Branch ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Branch details
+        in: body
+        name: branch
+        required: true
+        schema:
+          $ref: '#/definitions/business.UpdateBranchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/business.CreateBranchResponse'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Update a branch
+      tags:
+      - business
+  /api/v1/business/supplier:
+    post:
+      consumes:
+      - application/json
+      description: Create a supplier
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/business.Supplier'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Create a supplier
+      tags:
+      - supplier
+  /api/v1/inventory/brand:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Create a new brand.
+      parameters:
+      - description: Brand name
+        in: formData
+        name: name
+        required: true
+        type: string
+      - description: Brand description
+        in: formData
+        name: description
+        type: string
+      - description: is brand active?
+        in: formData
+        name: isActive
+        type: boolean
+      - description: brand logo
+        in: formData
+        name: logo
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/inventory.CreateBrandResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a brand
+      tags:
+      - inventory
+  /api/v1/inventory/category:
+    post:
+      consumes:
+      - application/json
+      description: Create a category
+      parameters:
+      - description: category details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/inventory.Category'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/inventory.CategoryResponse'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Create Category
+      tags:
+      - inventory
+  /api/v1/inventory/unit:
+    post:
+      consumes:
+      - application/json
+      description: Create an inventory unit.
+      parameters:
+      - description: unit details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/inventory.UnitRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/inventory.UnitResponse'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Create a unit
+      tags:
+      - inventory
+  /api/v1/inventory/variation:
+    post:
+      consumes:
+      - application/json
+      description: Create an item variation. If sku is empty, system autogenerates
+        it.
+      parameters:
+      - description: variation details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/inventory.VariationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/inventory.VariationResponse'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Create a variant
+      tags:
+      - inventory
+  /business/{id}:
+    patch:
+      consumes:
+      - application/json
+      description: Update a business
+      parameters:
+      - description: Business ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Business
+        in: body
+        name: business
+        required: true
+        schema:
+          $ref: '#/definitions/business.UpdateBusinessRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/business.UpdateBusinessResponse'
+        "400":
+          description: Bad Request
+        "403":
+          description: Forbidden
+        "404":
+          description: Not Found
+        "500":
+          description: Internal Server Error
+      summary: Update a business
+      tags:
+      - business
+  /logs:
+    get:
+      consumes:
+      - application/json
+      description: Gets 100 system log entries.
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/logs.LogsResponse'
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Fetches 100 system logs
+      tags:
+      - Logs
+  /pos/items:
+    post:
+      consumes:
+      - application/json
+      description: Create a new inventory item
+      parameters:
+      - description: Item details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/pos.CreateItemRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Item created successfully
+          schema:
+            $ref: '#/definitions/pos.ItemResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/pos.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/pos.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/pos.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/pos.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create item
+      tags:
+      - pos
+  /pos/sales:
+    post:
+      consumes:
+      - application/json
+      description: Create a new sale transaction
+      parameters:
+      - description: Sale details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/pos.CreateSaleRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Sale created successfully
+          schema:
+            $ref: '#/definitions/pos.SaleResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/pos.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/pos.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/pos.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/pos.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create sale
+      tags:
+      - pos
+  /pos/sales/history:
+    get:
+      description: Get sales history with optional filters
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Number of items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: start_date
+        type: string
+      - description: End date (YYYY-MM-DD)
+        in: query
+        name: end_date
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Sales history retrieved successfully
+          schema:
+            $ref: '#/definitions/pos.SalesHistoryResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/pos.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/pos.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/pos.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get sales history
+      tags:
+      - pos
+  /store:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: store details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/store.storeParams'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/store.storeParams'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Create a store
+      tags:
+      - store
+securityDefinitions:
+  BearerAuth:
+    description: 'JWT Authorization header using the Bearer scheme. Example: "Authorization:
+      Bearer {token}"'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

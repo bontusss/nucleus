@@ -1,0 +1,861 @@
+basePath: /api
+definitions:
+  auth.CreateRoleRequest:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  auth.CreateUserRequest:
+    properties:
+      email:
+        type: string
+      first_name:
+        minLength: 2
+        type: string
+      gender:
+        enum:
+        - male
+        - female
+        type: string
+      is_active:
+        type: boolean
+      last_name:
+        minLength: 2
+        type: string
+      password:
+        minLength: 4
+        type: string
+      role_id:
+        type: integer
+      username:
+        minLength: 3
+        type: string
+    required:
+    - email
+    - first_name
+    - gender
+    - is_active
+    - last_name
+    - password
+    - role_id
+    - username
+    type: object
+  auth.ErrorResponse:
+    description: Error response payload
+    properties:
+      error:
+        description: Error message
+        example: Invalid credentials
+        type: string
+    type: object
+  auth.LoginRequest:
+    description: Login request payload
+    properties:
+      email:
+        description: Email for authentication (optional if username provided)
+        example: admin@hotel.com
+        type: string
+      password:
+        description: Password for authentication
+        example: password123
+        type: string
+      username:
+        description: Username for authentication (optional if email provided)
+        example: admin
+        type: string
+    required:
+    - password
+    type: object
+  auth.LoginResponse:
+    description: Login response payload
+    properties:
+      token:
+        description: JWT authentication token
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+    type: object
+  auth.ResetPasswordRequest:
+    properties:
+      new_password:
+        minLength: 8
+        type: string
+    required:
+    - new_password
+    type: object
+  auth.UpdateRoleRequest:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    type: object
+  auth.UpdateUserRequest:
+    properties:
+      email:
+        type: string
+      first_name:
+        minLength: 2
+        type: string
+      gender:
+        enum:
+        - male
+        - female
+        type: string
+      is_active:
+        type: boolean
+      last_name:
+        minLength: 2
+        type: string
+      role_id:
+        type: integer
+      username:
+        minLength: 3
+        type: string
+    type: object
+  pos.CreateItemRequest:
+    description: Create item request payload
+    properties:
+      category:
+        description: Item category
+        example: Room Service
+        type: string
+      description:
+        description: Item description
+        example: 24-hour room service with premium menu
+        type: string
+      name:
+        description: Item name
+        example: Deluxe Room Service
+        type: string
+      price:
+        description: Item price
+        example: 45.99
+        type: number
+      sku:
+        description: Item SKU
+        example: RS-DELUXE-001
+        type: string
+      stock_quantity:
+        description: Stock quantity
+        example: 100
+        type: integer
+    required:
+    - category
+    - name
+    - price
+    type: object
+  pos.CreateSaleRequest:
+    description: Create sale request payload
+    properties:
+      customer_id:
+        description: Customer ID
+        example: 1
+        type: integer
+      discount:
+        description: Discount amount
+        example: 10.5
+        type: number
+      items:
+        description: List of items in the sale
+        items:
+          $ref: '#/definitions/pos.SaleItem'
+        type: array
+      tax_rate:
+        description: Tax rate percentage
+        example: 8.25
+        type: number
+    required:
+    - customer_id
+    - items
+    type: object
+  pos.ErrorResponse:
+    description: Error response payload
+    properties:
+      error:
+        description: Error message
+        example: Invalid request
+        type: string
+    type: object
+  pos.ItemResponse:
+    description: Item response payload
+    properties:
+      category:
+        description: Item category
+        example: Room Service
+        type: string
+      created_at:
+        description: Item creation timestamp
+        example: "2024-01-15T10:30:00Z"
+        type: string
+      description:
+        description: Item description
+        example: 24-hour room service with premium menu
+        type: string
+      id:
+        description: Item ID
+        example: 1
+        type: integer
+      name:
+        description: Item name
+        example: Deluxe Room Service
+        type: string
+      price:
+        description: Item price
+        example: 45.99
+        type: number
+      sku:
+        description: Item SKU
+        example: RS-DELUXE-001
+        type: string
+      stock_quantity:
+        description: Stock quantity
+        example: 100
+        type: integer
+      updated_at:
+        description: Item last update timestamp
+        example: "2024-01-15T10:30:00Z"
+        type: string
+    type: object
+  pos.PaginationResponse:
+    description: Pagination response payload
+    properties:
+      limit:
+        description: Number of items per page
+        example: 20
+        type: integer
+      page:
+        description: Current page number
+        example: 1
+        type: integer
+      pages:
+        description: Total number of pages
+        example: 5
+        type: integer
+      total:
+        description: Total number of items
+        example: 100
+        type: integer
+    type: object
+  pos.SaleItem:
+    description: Sale item details
+    properties:
+      item_id:
+        description: Item ID
+        example: 1
+        type: integer
+      price:
+        description: Price per unit
+        example: 25.99
+        type: number
+      quantity:
+        description: Quantity of the item
+        example: 2
+        type: integer
+    required:
+    - item_id
+    - price
+    - quantity
+    type: object
+  pos.SaleResponse:
+    description: Sale response payload
+    properties:
+      created_at:
+        description: Sale creation timestamp
+        example: "2024-01-15T10:30:00Z"
+        type: string
+      customer_id:
+        description: Customer ID
+        example: 1
+        type: integer
+      discount_amount:
+        description: Discount amount
+        example: 10.5
+        type: number
+      id:
+        description: Sale ID
+        example: 1
+        type: integer
+      items:
+        description: List of items in the sale
+        items:
+          $ref: '#/definitions/pos.SaleItem'
+        type: array
+      tax_amount:
+        description: Tax amount
+        example: 4.27
+        type: number
+      total_amount:
+        description: Total amount after tax and discount
+        example: 56.23
+        type: number
+    type: object
+  pos.SalesHistoryResponse:
+    description: Sales history response payload
+    properties:
+      pagination:
+        allOf:
+        - $ref: '#/definitions/pos.PaginationResponse'
+        description: Pagination information
+      sales:
+        description: List of sales
+        items:
+          $ref: '#/definitions/pos.SaleResponse'
+        type: array
+    type: object
+host: localhost:9000
+info:
+  contact:
+    email: support@hotel-erp.com
+    name: Hotel ERP API Support
+  description: This is the Hotel ERP API server. It provides endpoints for managing
+    hotel operations including authentication, point of sale, inventory, and more.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: Hotel ERP API
+  version: 1.0.0
+paths:
+  /api/v1/admin/roles:
+    get:
+      description: Get a list of all roles in the system
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of roles
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all roles
+      tags:
+      - admin
+    post:
+      consumes:
+      - application/json
+      description: Create a new role in the system
+      parameters:
+      - description: Role creation data
+        in: body
+        name: role
+        required: true
+        schema:
+          $ref: '#/definitions/auth.CreateRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Role created successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new role
+      tags:
+      - admin
+  /api/v1/admin/roles/{id}:
+    delete:
+      description: Delete a role from the system
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: Role deleted successfully
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete role
+      tags:
+      - admin
+    get:
+      description: Get detailed information about a specific role
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Role details
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Role not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get role by ID
+      tags:
+      - admin
+    put:
+      consumes:
+      - application/json
+      description: Update role information
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Role update data
+        in: body
+        name: role
+        required: true
+        schema:
+          $ref: '#/definitions/auth.UpdateRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Role updated successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update role
+      tags:
+      - admin
+  /api/v1/admin/users:
+    get:
+      description: Get a list of all users in the system
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of users
+          schema:
+            items:
+              additionalProperties: true
+              type: object
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all users
+      tags:
+      - admin
+    post:
+      consumes:
+      - application/json
+      description: Create a new user account with role assignment
+      parameters:
+      - description: User creation data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/auth.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: User created successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new user
+      tags:
+      - admin
+  /api/v1/admin/users/{id}:
+    delete:
+      description: Delete a user account from the system
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: User deleted successfully
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete user
+      tags:
+      - admin
+    get:
+      description: Get detailed information about a specific user
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User details
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get user by ID
+      tags:
+      - admin
+    put:
+      consumes:
+      - application/json
+      description: Update user account information and settings
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: User update data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/auth.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User updated successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update user information
+      tags:
+      - admin
+  /api/v1/admin/users/{id}/reset-password:
+    post:
+      consumes:
+      - application/json
+      description: Reset password for a specific user
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: New password data
+        in: body
+        name: password
+        required: true
+        schema:
+          $ref: '#/definitions/auth.ResetPasswordRequest'
+      responses:
+        "204":
+          description: Password reset successfully
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Reset user password
+      tags:
+      - admin
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user with email or username and return JWT token
+      parameters:
+      - description: Login credentials (email or username)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Login successful
+          schema:
+            $ref: '#/definitions/auth.LoginResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+      summary: User login
+      tags:
+      - auth
+  /pos/items:
+    post:
+      consumes:
+      - application/json
+      description: Create a new inventory item
+      parameters:
+      - description: Item details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/pos.CreateItemRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Item created successfully
+          schema:
+            $ref: '#/definitions/pos.ItemResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/pos.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/pos.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/pos.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/pos.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create item
+      tags:
+      - pos
+  /pos/sales:
+    post:
+      consumes:
+      - application/json
+      description: Create a new sale transaction
+      parameters:
+      - description: Sale details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/pos.CreateSaleRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Sale created successfully
+          schema:
+            $ref: '#/definitions/pos.SaleResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/pos.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/pos.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/pos.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/pos.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create sale
+      tags:
+      - pos
+  /pos/sales/history:
+    get:
+      description: Get sales history with optional filters
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Number of items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: start_date
+        type: string
+      - description: End date (YYYY-MM-DD)
+        in: query
+        name: end_date
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Sales history retrieved successfully
+          schema:
+            $ref: '#/definitions/pos.SalesHistoryResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/pos.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/pos.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/pos.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get sales history
+      tags:
+      - pos
+securityDefinitions:
+  BearerAuth:
+    description: 'JWT Authorization header using the Bearer scheme. Example: "Authorization:
+      Bearer {token}"'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

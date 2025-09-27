@@ -1,0 +1,25 @@
+meta {
+  name: Create a unit
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseURI}}inventory/unit
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "name": "kg"
+  }
+}
+
+settings {
+  encodeUrl: true
+}

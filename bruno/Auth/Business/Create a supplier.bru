@@ -1,0 +1,29 @@
+meta {
+  name: Create a supplier
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseURI}}business/supplier
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "name": "test supplier",
+    "business_id": 1,
+    "metadata": {
+      "test": "data"
+    }
+  }
+}
+
+settings {
+  encodeUrl: true
+}

@@ -1,0 +1,28 @@
+meta {
+  name: Update business
+  type: http
+  seq: 7
+}
+
+patch {
+  url: {{baseURI}}business/9
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "website": "test.example.com",
+    "metadata": {
+      "founded": "1234"
+    }
+  }
+}
+
+settings {
+  encodeUrl: true
+}

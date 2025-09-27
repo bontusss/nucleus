@@ -1,0 +1,28 @@
+meta {
+  name: Create variation
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseURI}}inventory/variation
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "name": "Medium",
+    "item_id": 1,
+    "unit_id": 1,
+    "price": "5000"
+  }
+}
+
+settings {
+  encodeUrl: true
+}

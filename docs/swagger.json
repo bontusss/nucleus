@@ -1,0 +1,1273 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "This is the Hotel ERP API server. It provides endpoints for managing hotel operations including authentication, point of sale, inventory, and more.",
+        "title": "Hotel ERP API",
+        "termsOfService": "http://swagger.io/terms/",
+        "contact": {
+            "name": "Hotel ERP API Support",
+            "email": "support@hotel-erp.com"
+        },
+        "license": {
+            "name": "MIT",
+            "url": "https://opensource.org/licenses/MIT"
+        },
+        "version": "1.0.0"
+    },
+    "host": "localhost:9000",
+    "basePath": "/api",
+    "paths": {
+        "/api/v1/admin/roles": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get a list of all roles in the system",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "List all roles",
+                "responses": {
+                    "200": {
+                        "description": "List of roles",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new role in the system",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Create a new role",
+                "parameters": [
+                    {
+                        "description": "Role creation data",
+                        "name": "role",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.CreateRoleRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Role created successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/roles/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get detailed information about a specific role",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Get role by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Role ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Role details",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Role not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update role information",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Update role",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Role ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Role update data",
+                        "name": "role",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.UpdateRoleRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Role updated successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a role from the system",
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Delete role",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Role ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Role deleted successfully"
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/users": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get a list of all users in the system",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "List all users",
+                "responses": {
+                    "200": {
+                        "description": "List of users",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "additionalProperties": true
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new user account with role assignment",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Create a new user",
+                "parameters": [
+                    {
+                        "description": "User creation data",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.CreateUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "User created successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/users/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get detailed information about a specific user",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Get user by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User details",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update user account information and settings",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Update user information",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "User update data",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.UpdateUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User updated successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a user account from the system",
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Delete user",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "User deleted successfully"
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/users/{id}/reset-password": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Reset password for a specific user",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Reset user password",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New password data",
+                        "name": "password",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.ResetPasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Password reset successfully"
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/login": {
+            "post": {
+                "description": "Authenticate user with email or username and return JWT token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "User login",
+                "parameters": [
+                    {
+                        "description": "Login credentials (email or username)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Login successful",
+                        "schema": {
+                            "$ref": "#/definitions/auth.LoginResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/auth.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/auth.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/auth.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/pos/items": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new inventory item",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pos"
+                ],
+                "summary": "Create item",
+                "parameters": [
+                    {
+                        "description": "Item details",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/pos.CreateItemRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Item created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/pos.ItemResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/pos.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/pos.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/pos.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/pos.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/pos/sales": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new sale transaction",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pos"
+                ],
+                "summary": "Create sale",
+                "parameters": [
+                    {
+                        "description": "Sale details",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/pos.CreateSaleRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Sale created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/pos.SaleResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/pos.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/pos.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/pos.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/pos.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/pos/sales/history": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get sales history with optional filters",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "pos"
+                ],
+                "summary": "Get sales history",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Number of items per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "name": "start_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD)",
+                        "name": "end_date",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Sales history retrieved successfully",
+                        "schema": {
+                            "$ref": "#/definitions/pos.SalesHistoryResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/pos.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/pos.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/pos.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "auth.CreateRoleRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "auth.CreateUserRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "first_name",
+                "gender",
+                "is_active",
+                "last_name",
+                "password",
+                "role_id",
+                "username"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "first_name": {
+                    "type": "string",
+                    "minLength": 2
+                },
+                "gender": {
+                    "type": "string",
+                    "enum": [
+                        "male",
+                        "female"
+                    ]
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "last_name": {
+                    "type": "string",
+                    "minLength": 2
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 4
+                },
+                "role_id": {
+                    "type": "integer"
+                },
+                "username": {
+                    "type": "string",
+                    "minLength": 3
+                }
+            }
+        },
+        "auth.ErrorResponse": {
+            "description": "Error response payload",
+            "type": "object",
+            "properties": {
+                "error": {
+                    "description": "Error message",
+                    "type": "string",
+                    "example": "Invalid credentials"
+                }
+            }
+        },
+        "auth.LoginRequest": {
+            "description": "Login request payload",
+            "type": "object",
+            "required": [
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "description": "Email for authentication (optional if username provided)",
+                    "type": "string",
+                    "example": "admin@hotel.com"
+                },
+                "password": {
+                    "description": "Password for authentication",
+                    "type": "string",
+                    "example": "password123"
+                },
+                "username": {
+                    "description": "Username for authentication (optional if email provided)",
+                    "type": "string",
+                    "example": "admin"
+                }
+            }
+        },
+        "auth.LoginResponse": {
+            "description": "Login response payload",
+            "type": "object",
+            "properties": {
+                "token": {
+                    "description": "JWT authentication token",
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                }
+            }
+        },
+        "auth.ResetPasswordRequest": {
+            "type": "object",
+            "required": [
+                "new_password"
+            ],
+            "properties": {
+                "new_password": {
+                    "type": "string",
+                    "minLength": 8
+                }
+            }
+        },
+        "auth.UpdateRoleRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "auth.UpdateUserRequest": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "first_name": {
+                    "type": "string",
+                    "minLength": 2
+                },
+                "gender": {
+                    "type": "string",
+                    "enum": [
+                        "male",
+                        "female"
+                    ]
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "last_name": {
+                    "type": "string",
+                    "minLength": 2
+                },
+                "role_id": {
+                    "type": "integer"
+                },
+                "username": {
+                    "type": "string",
+                    "minLength": 3
+                }
+            }
+        },
+        "pos.CreateItemRequest": {
+            "description": "Create item request payload",
+            "type": "object",
+            "required": [
+                "category",
+                "name",
+                "price"
+            ],
+            "properties": {
+                "category": {
+                    "description": "Item category",
+                    "type": "string",
+                    "example": "Room Service"
+                },
+                "description": {
+                    "description": "Item description",
+                    "type": "string",
+                    "example": "24-hour room service with premium menu"
+                },
+                "name": {
+                    "description": "Item name",
+                    "type": "string",
+                    "example": "Deluxe Room Service"
+                },
+                "price": {
+                    "description": "Item price",
+                    "type": "number",
+                    "example": 45.99
+                },
+                "sku": {
+                    "description": "Item SKU",
+                    "type": "string",
+                    "example": "RS-DELUXE-001"
+                },
+                "stock_quantity": {
+                    "description": "Stock quantity",
+                    "type": "integer",
+                    "example": 100
+                }
+            }
+        },
+        "pos.CreateSaleRequest": {
+            "description": "Create sale request payload",
+            "type": "object",
+            "required": [
+                "customer_id",
+                "items"
+            ],
+            "properties": {
+                "customer_id": {
+                    "description": "Customer ID",
+                    "type": "integer",
+                    "example": 1
+                },
+                "discount": {
+                    "description": "Discount amount",
+                    "type": "number",
+                    "example": 10.5
+                },
+                "items": {
+                    "description": "List of items in the sale",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pos.SaleItem"
+                    }
+                },
+                "tax_rate": {
+                    "description": "Tax rate percentage",
+                    "type": "number",
+                    "example": 8.25
+                }
+            }
+        },
+        "pos.ErrorResponse": {
+            "description": "Error response payload",
+            "type": "object",
+            "properties": {
+                "error": {
+                    "description": "Error message",
+                    "type": "string",
+                    "example": "Invalid request"
+                }
+            }
+        },
+        "pos.ItemResponse": {
+            "description": "Item response payload",
+            "type": "object",
+            "properties": {
+                "category": {
+                    "description": "Item category",
+                    "type": "string",
+                    "example": "Room Service"
+                },
+                "created_at": {
+                    "description": "Item creation timestamp",
+                    "type": "string",
+                    "example": "2024-01-15T10:30:00Z"
+                },
+                "description": {
+                    "description": "Item description",
+                    "type": "string",
+                    "example": "24-hour room service with premium menu"
+                },
+                "id": {
+                    "description": "Item ID",
+                    "type": "integer",
+                    "example": 1
+                },
+                "name": {
+                    "description": "Item name",
+                    "type": "string",
+                    "example": "Deluxe Room Service"
+                },
+                "price": {
+                    "description": "Item price",
+                    "type": "number",
+                    "example": 45.99
+                },
+                "sku": {
+                    "description": "Item SKU",
+                    "type": "string",
+                    "example": "RS-DELUXE-001"
+                },
+                "stock_quantity": {
+                    "description": "Stock quantity",
+                    "type": "integer",
+                    "example": 100
+                },
+                "updated_at": {
+                    "description": "Item last update timestamp",
+                    "type": "string",
+                    "example": "2024-01-15T10:30:00Z"
+                }
+            }
+        },
+        "pos.PaginationResponse": {
+            "description": "Pagination response payload",
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "description": "Number of items per page",
+                    "type": "integer",
+                    "example": 20
+                },
+                "page": {
+                    "description": "Current page number",
+                    "type": "integer",
+                    "example": 1
+                },
+                "pages": {
+                    "description": "Total number of pages",
+                    "type": "integer",
+                    "example": 5
+                },
+                "total": {
+                    "description": "Total number of items",
+                    "type": "integer",
+                    "example": 100
+                }
+            }
+        },
+        "pos.SaleItem": {
+            "description": "Sale item details",
+            "type": "object",
+            "required": [
+                "item_id",
+                "price",
+                "quantity"
+            ],
+            "properties": {
+                "item_id": {
+                    "description": "Item ID",
+                    "type": "integer",
+                    "example": 1
+                },
+                "price": {
+                    "description": "Price per unit",
+                    "type": "number",
+                    "example": 25.99
+                },
+                "quantity": {
+                    "description": "Quantity of the item",
+                    "type": "integer",
+                    "example": 2
+                }
+            }
+        },
+        "pos.SaleResponse": {
+            "description": "Sale response payload",
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "description": "Sale creation timestamp",
+                    "type": "string",
+                    "example": "2024-01-15T10:30:00Z"
+                },
+                "customer_id": {
+                    "description": "Customer ID",
+                    "type": "integer",
+                    "example": 1
+                },
+                "discount_amount": {
+                    "description": "Discount amount",
+                    "type": "number",
+                    "example": 10.5
+                },
+                "id": {
+                    "description": "Sale ID",
+                    "type": "integer",
+                    "example": 1
+                },
+                "items": {
+                    "description": "List of items in the sale",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pos.SaleItem"
+                    }
+                },
+                "tax_amount": {
+                    "description": "Tax amount",
+                    "type": "number",
+                    "example": 4.27
+                },
+                "total_amount": {
+                    "description": "Total amount after tax and discount",
+                    "type": "number",
+                    "example": 56.23
+                }
+            }
+        },
+        "pos.SalesHistoryResponse": {
+            "description": "Sales history response payload",
+            "type": "object",
+            "properties": {
+                "pagination": {
+                    "description": "Pagination information",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/pos.PaginationResponse"
+                        }
+                    ]
+                },
+                "sales": {
+                    "description": "List of sales",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/pos.SaleResponse"
+                    }
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}

@@ -1,0 +1,31 @@
+meta {
+  name: Create business with branch
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseURI}}business
+  body: multipartForm
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "name": "Addrex hotels",
+    "country": "Nigeria"
+  }
+}
+
+body:multipart-form {
+  name: addrexxx
+  : 
+}
+
+settings {
+  encodeUrl: true
+}

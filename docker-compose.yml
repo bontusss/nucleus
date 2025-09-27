@@ -1,0 +1,102 @@
+version: "3.8"
+
+services:
+  herp-api:
+    container_name: herp_api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "9000:9000"
+    environment:
+      - GIN_MODE=release
+      - PORT=9000
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - herp-network
+    restart: unless-stopped
+    stop_grace_period: 30s
+    stop_signal: SIGTERM
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:9000/health",
+        ]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+    volumes:
+      - ./tmp:/app/tmp
+      - ./logs:/app/logs
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.5"
+        reservations:
+          memory: 256M
+          cpus: "0.25"
+
+  postgres:
+    container_name: herp_postgres
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: herp_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    ports:
+      - "5431:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d
+    networks:
+      - herp-network
+    restart: unless-stopped
+    stop_grace_period: 10s
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d herp_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    container_name: herp_redis
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --protected-mode no --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      - herp-network
+    restart: unless-stopped
+    stop_grace_period: 10s
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  herp-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

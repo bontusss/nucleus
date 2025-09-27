@@ -1,0 +1,22 @@
+meta {
+  name: Verify email
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseURI}}auth/verify-email
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "code": "0004163",
+    "email": "ikwecheghu@gmail.com"
+  }
+}
+
+settings {
+  encodeUrl: true
+}

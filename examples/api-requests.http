@@ -1,0 +1,255 @@
+# Hotel ERP API Examples
+# Use this file to test API endpoints
+# Requires a REST client like VS Code REST Client extension or Postman
+
+### Variables
+@host = http://localhost:9000
+@apiBase = {{host}}/api
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+### Health Check
+GET {{host}}/health
+Content-Type: application/json
+
+### Documentation Health
+GET {{host}}/docs/health
+Content-Type: application/json
+
+### Authentication - Login
+POST {{apiBase}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "password123"
+}
+
+### POS - Create Sale
+POST {{apiBase}}/pos/sales
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "customer_id": 1,
+  "items": [
+    {
+      "item_id": 1,
+      "quantity": 2,
+      "price": 25.99
+    },
+    {
+      "item_id": 2,
+      "quantity": 1,
+      "price": 15.50
+    }
+  ],
+  "discount": 10.5,
+  "tax_rate": 8.25
+}
+
+### POS - Get Sales History (Basic)
+GET {{apiBase}}/pos/sales/history
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### POS - Get Sales History (With Filters)
+GET {{apiBase}}/pos/sales/history?page=1&limit=10&start_date=2024-01-01&end_date=2024-01-31
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### POS - Create Item
+POST {{apiBase}}/pos/items
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Deluxe Room Service",
+  "description": "24-hour room service with premium menu",
+  "price": 45.99,
+  "category": "Room Service",
+  "sku": "RS-DELUXE-001",
+  "stock_quantity": 100
+}
+
+### POS - Create Item (Food & Beverage)
+POST {{apiBase}}/pos/items
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Gourmet Coffee",
+  "description": "Premium blend coffee served hot",
+  "price": 5.99,
+  "category": "Food & Beverage",
+  "sku": "FB-COFFEE-001",
+  "stock_quantity": 500
+}
+
+### POS - Create Item (Spa Services)
+POST {{apiBase}}/pos/items
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Full Body Massage",
+  "description": "90-minute relaxing full body massage",
+  "price": 120.00,
+  "category": "Spa Services",
+  "sku": "SPA-MASSAGE-001",
+  "stock_quantity": 10
+}
+
+### Error Examples
+
+### Authentication - Invalid Credentials
+POST {{apiBase}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "invalid",
+  "password": "wrong"
+}
+
+### POS - Create Sale (Missing Auth)
+POST {{apiBase}}/pos/sales
+Content-Type: application/json
+
+{
+  "customer_id": 1,
+  "items": [
+    {
+      "item_id": 1,
+      "quantity": 2,
+      "price": 25.99
+    }
+  ]
+}
+
+### POS - Create Sale (Bad Request)
+POST {{apiBase}}/pos/sales
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "customer_id": "invalid",
+  "items": []
+}
+
+### POS - Create Item (Bad Request)
+POST {{apiBase}}/pos/items
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "",
+  "price": "invalid"
+}
+
+### Batch Operations Examples
+
+### Create Multiple Items
+POST {{apiBase}}/pos/items
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Standard Room Cleaning",
+  "description": "Daily housekeeping service",
+  "price": 25.00,
+  "category": "Housekeeping",
+  "sku": "HK-CLEAN-001",
+  "stock_quantity": 1000
+}
+
+###
+POST {{apiBase}}/pos/items
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Laundry Service",
+  "description": "Same-day laundry and dry cleaning",
+  "price": 15.00,
+  "category": "Housekeeping",
+  "sku": "HK-LAUNDRY-001",
+  "stock_quantity": 200
+}
+
+###
+POST {{apiBase}}/pos/items
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Mini Bar Restock",
+  "description": "Mini bar restocking service",
+  "price": 35.00,
+  "category": "Room Service",
+  "sku": "RS-MINIBAR-001",
+  "stock_quantity": 50
+}
+
+### Large Sale Example
+POST {{apiBase}}/pos/sales
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "customer_id": 5,
+  "items": [
+    {
+      "item_id": 1,
+      "quantity": 1,
+      "price": 120.00
+    },
+    {
+      "item_id": 2,
+      "quantity": 2,
+      "price": 45.99
+    },
+    {
+      "item_id": 3,
+      "quantity": 3,
+      "price": 5.99
+    },
+    {
+      "item_id": 4,
+      "quantity": 1,
+      "price": 25.00
+    }
+  ],
+  "discount": 25.00,
+  "tax_rate": 10.0
+}
+
+### Pagination Examples
+
+### First Page
+GET {{apiBase}}/pos/sales/history?page=1&limit=5
+Authorization: Bearer {{token}}
+
+### Second Page
+GET {{apiBase}}/pos/sales/history?page=2&limit=5
+Authorization: Bearer {{token}}
+
+### Large Page Size
+GET {{apiBase}}/pos/sales/history?page=1&limit=50
+Authorization: Bearer {{token}}
+
+### Date Range Examples
+
+### Current Month
+GET {{apiBase}}/pos/sales/history?start_date=2024-01-01&end_date=2024-01-31
+Authorization: Bearer {{token}}
+
+### Last Week
+GET {{apiBase}}/pos/sales/history?start_date=2024-01-08&end_date=2024-01-15
+Authorization: Bearer {{token}}
+
+### Today Only
+GET {{apiBase}}/pos/sales/history?start_date=2024-01-15&end_date=2024-01-15
+Authorization: Bearer {{token}}
+
+### Combined Filters
+GET {{apiBase}}/pos/sales/history?page=1&limit=10&start_date=2024-01-01&end_date=2024-01-31
+Authorization: Bearer {{token}}

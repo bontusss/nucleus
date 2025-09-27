@@ -1,0 +1,32 @@
+meta {
+  name: Create User
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseURI}}admin/user
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "username": "cavy",
+    "password": "cavy123",
+    "first_name": "the",
+    "last_name": "cavy",
+    "email": "cavy@gmail.com",
+    "gender": "male",
+    "role_id": 1,
+    "is_active": true
+  }
+}
+
+settings {
+  encodeUrl: true
+}
