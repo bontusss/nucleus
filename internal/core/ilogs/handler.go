@@ -2,7 +2,7 @@ package logs
 
 import (
 	"nucleus/internal/auth"
-	"nucleus/internal/utils"
+	"nucleus/internal/core/api"
 	"nucleus/pkg/monitoring/logging"
 	"time"
 
@@ -58,7 +58,7 @@ func (h *LogsHandler) GetActivityLogs(c *gin.Context) {
 	logs, err := h.service.GetActivityLogs(c, 100)
 	if err != nil {
 		h.logger.Error("Failed to fetch logs: ", err)
-		utils.ErrorResponse(c, 500, "Failed to fetch logs")
+		api.ErrorResponse(c, 500, "Failed to fetch logs")
 		return
 	}
 
@@ -77,5 +77,5 @@ func (h *LogsHandler) GetActivityLogs(c *gin.Context) {
 		})
 	}
 
-	utils.SuccessResponse(c, 200, "Logs fetched successfully", logsResponse)
+	api.SuccessResponse(c, 200, "Logs fetched successfully", logsResponse)
 }

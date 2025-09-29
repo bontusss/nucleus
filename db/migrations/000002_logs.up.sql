@@ -13,7 +13,7 @@ CREATE TABLE activity_logs (
 );
 
 -- Login history
-CREATE TABLE login_history (
+CREATE TABLE login_histories (
     id SERIAL PRIMARY KEY,
     username_or_email VARCHAR(255) NOT NULL,
     login_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

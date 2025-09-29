@@ -1,5 +1,5 @@
 -- Migration to create the store table and related indexes
-CREATE TABLE store (
+CREATE TABLE stores (
     id SERIAL PRIMARY KEY,
     name VARCHAR(50) NOT NULL UNIQUE,
     description VARCHAR(255), -- describe what this store is for
@@ -15,14 +15,14 @@ CREATE TABLE store (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     assigned_user INTEGER REFERENCES users(id) ON DELETE SET NULL,
     manager_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-    FOREIGN KEY (branch_id) REFERENCES branch(id) ON DELETE CASCADE
+    FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE CASCADE
 );
 
 -- Ensure only one central store per branch
 CREATE UNIQUE INDEX unique_central_store_per_branch
-ON store(branch_id)
+ON stores(branch_id)
 WHERE store_type = 'central';
 
 -- Indexes for faster lookups
-CREATE INDEX idx_store_branch_id ON store (branch_id);
-CREATE INDEX idx_store_name ON store (name);
+CREATE INDEX idx_store_branch_id ON stores (branch_id);
+CREATE INDEX idx_store_name ON stores (name);

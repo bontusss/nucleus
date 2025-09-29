@@ -8,27 +8,36 @@ package db
 import (
 	"context"
 	"database/sql"
+
+	"github.com/sqlc-dev/pqtype"
 )
 
 const createBrand = `-- name: CreateBrand :one
-INSERT INTO brand (name, description, logo)
-VALUES ($1, $2, $3)
-RETURNING id, name, description, logo, is_active, metadata, created_at, updated_at
+INSERT INTO brands (name, description, logo, business_id)
+VALUES ($1, $2, $3, $4)
+RETURNING id, name, business_id, description, logo, is_active, metadata, created_at, updated_at
 `
 
 type CreateBrandParams struct {
 	Name        string         `json:"name"`
 	Description sql.NullString `json:"description"`
 	Logo        sql.NullString `json:"logo"`
+	BusinessID  int32          `json:"business_id"`
 }
 
 // Brand
 func (q *Queries) CreateBrand(ctx context.Context, arg CreateBrandParams) (Brand, error) {
-	row := q.db.QueryRowContext(ctx, createBrand, arg.Name, arg.Description, arg.Logo)
+	row := q.db.QueryRowContext(ctx, createBrand,
+		arg.Name,
+		arg.Description,
+		arg.Logo,
+		arg.BusinessID,
+	)
 	var i Brand
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.BusinessID,
 		&i.Description,
 		&i.Logo,
 		&i.IsActive,
@@ -40,24 +49,31 @@ func (q *Queries) CreateBrand(ctx context.Context, arg CreateBrandParams) (Brand
 }
 
 const createCategory = `-- name: CreateCategory :one
-INSERT INTO category (name, parent_id, description)
-VALUES ($1, $2, $3)
-RETURNING id, name, parent_id, description, is_active, metadata, created_at, updated_at
+INSERT INTO categories (name, parent_id, description, business_id)
+VALUES ($1, $2, $3, $4)
+RETURNING id, name, business_id, parent_id, description, is_active, metadata, created_at, updated_at
 `
 
 type CreateCategoryParams struct {
 	Name        string         `json:"name"`
 	ParentID    sql.NullInt32  `json:"parent_id"`
 	Description sql.NullString `json:"description"`
+	BusinessID  int32          `json:"business_id"`
 }
 
 // Category
 func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) (Category, error) {
-	row := q.db.QueryRowContext(ctx, createCategory, arg.Name, arg.ParentID, arg.Description)
+	row := q.db.QueryRowContext(ctx, createCategory,
+		arg.Name,
+		arg.ParentID,
+		arg.Description,
+		arg.BusinessID,
+	)
 	var i Category
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.BusinessID,
 		&i.ParentID,
 		&i.Description,
 		&i.IsActive,
@@ -69,9 +85,9 @@ func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) 
 }
 
 const createColor = `-- name: CreateColor :one
-INSERT INTO color (name)
+INSERT INTO colors (name)
 VALUES ($1)
-RETURNING id, name, metadata, created_at, updated_at
+RETURNING id, business_id, name, metadata, created_at, updated_at
 `
 
 // Color
@@ -80,6 +96,7 @@ func (q *Queries) CreateColor(ctx context.Context, name string) (Color, error) {
 	var i Color
 	err := row.Scan(
 		&i.ID,
+		&i.BusinessID,
 		&i.Name,
 		&i.Metadata,
 		&i.CreatedAt,
@@ -89,9 +106,9 @@ func (q *Queries) CreateColor(ctx context.Context, name string) (Color, error) {
 }
 
 const createItem = `-- name: CreateItem :one
-INSERT INTO item (brand_id, category_id, name, description, no_variants, item_type)
+INSERT INTO items (brand_id, category_id, name, description, item_type, business_id)
 VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, brand_id, category_id, name, description, item_type, is_active, no_variants, metadata, created_at, updated_at
+RETURNING id, business_id, brand_id, category_id, name, description, item_type, is_active, metadata, created_at, updated_at
 `
 
 type CreateItemParams struct {
@@ -99,8 +116,8 @@ type CreateItemParams struct {
 	CategoryID  int32          `json:"category_id"`
 	Name        string         `json:"name"`
 	Description sql.NullString `json:"description"`
-	NoVariants  sql.NullBool   `json:"no_variants"`
 	ItemType    string         `json:"item_type"`
+	BusinessID  int32          `json:"business_id"`
 }
 
 // Item
@@ -110,19 +127,19 @@ func (q *Queries) CreateItem(ctx context.Context, arg CreateItemParams) (Item, e
 		arg.CategoryID,
 		arg.Name,
 		arg.Description,
-		arg.NoVariants,
 		arg.ItemType,
+		arg.BusinessID,
 	)
 	var i Item
 	err := row.Scan(
 		&i.ID,
+		&i.BusinessID,
 		&i.BrandID,
 		&i.CategoryID,
 		&i.Name,
 		&i.Description,
 		&i.ItemType,
 		&i.IsActive,
-		&i.NoVariants,
 		&i.Metadata,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -131,7 +148,7 @@ func (q *Queries) CreateItem(ctx context.Context, arg CreateItemParams) (Item, e
 }
 
 const createItemImage = `-- name: CreateItemImage :one
-INSERT INTO item_image (item_id, variation_id, url, is_primary)
+INSERT INTO item_images (item_id, variation_id, url, is_primary)
 VALUES ($1, $2, $3, $4)
 RETURNING id, item_id, variation_id, url, is_primary, metadata, created_at
 `
@@ -165,9 +182,9 @@ func (q *Queries) CreateItemImage(ctx context.Context, arg CreateItemImageParams
 }
 
 const createUnit = `-- name: CreateUnit :one
-INSERT INTO unit (name, short_code)
+INSERT INTO units (name, short_code)
 VALUES ($1, $2)
-RETURNING id, name, short_code, metadata, created_at, updated_at
+RETURNING id, business_id, name, short_code, metadata, is_active, created_at, updated_at
 `
 
 type CreateUnitParams struct {
@@ -181,9 +198,11 @@ func (q *Queries) CreateUnit(ctx context.Context, arg CreateUnitParams) (Unit, e
 	var i Unit
 	err := row.Scan(
 		&i.ID,
+		&i.BusinessID,
 		&i.Name,
 		&i.ShortCode,
 		&i.Metadata,
+		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -191,22 +210,25 @@ func (q *Queries) CreateUnit(ctx context.Context, arg CreateUnitParams) (Unit, e
 }
 
 const createVariation = `-- name: CreateVariation :one
-INSERT INTO variation (item_id, sku, name, unit_id, size, color_id, barcode, base_price, reorder_level, is_default)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-RETURNING id, item_id, sku, name, unit_id, size, color_id, barcode, base_price, reorder_level, is_default, is_active, metadata, created_at, updated_at
+INSERT INTO variations (
+item_id, sku, name, unit_id, size, color_id, barcode,cost_price, base_price, reorder_level, metadata, is_active)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+RETURNING id, item_id, sku, name, unit_id, size, color_id, barcode, cost_price, base_price, reorder_level, is_active, metadata, created_at, updated_at
 `
 
 type CreateVariationParams struct {
-	ItemID       int32          `json:"item_id"`
-	Sku          string         `json:"sku"`
-	Name         string         `json:"name"`
-	UnitID       int32          `json:"unit_id"`
-	Size         sql.NullString `json:"size"`
-	ColorID      sql.NullInt32  `json:"color_id"`
-	Barcode      sql.NullString `json:"barcode"`
-	BasePrice    string         `json:"base_price"`
-	ReorderLevel sql.NullInt32  `json:"reorder_level"`
-	IsDefault    sql.NullBool   `json:"is_default"`
+	ItemID       int32                 `json:"item_id"`
+	Sku          string                `json:"sku"`
+	Name         string                `json:"name"`
+	UnitID       int32                 `json:"unit_id"`
+	Size         sql.NullString        `json:"size"`
+	ColorID      sql.NullInt32         `json:"color_id"`
+	Barcode      sql.NullString        `json:"barcode"`
+	CostPrice    sql.NullString        `json:"cost_price"`
+	BasePrice    string                `json:"base_price"`
+	ReorderLevel sql.NullInt32         `json:"reorder_level"`
+	Metadata     pqtype.NullRawMessage `json:"metadata"`
+	IsActive     sql.NullBool          `json:"is_active"`
 }
 
 // Variation
@@ -219,9 +241,11 @@ func (q *Queries) CreateVariation(ctx context.Context, arg CreateVariationParams
 		arg.Size,
 		arg.ColorID,
 		arg.Barcode,
+		arg.CostPrice,
 		arg.BasePrice,
 		arg.ReorderLevel,
-		arg.IsDefault,
+		arg.Metadata,
+		arg.IsActive,
 	)
 	var i Variation
 	err := row.Scan(
@@ -233,9 +257,9 @@ func (q *Queries) CreateVariation(ctx context.Context, arg CreateVariationParams
 		&i.Size,
 		&i.ColorID,
 		&i.Barcode,
+		&i.CostPrice,
 		&i.BasePrice,
 		&i.ReorderLevel,
-		&i.IsDefault,
 		&i.IsActive,
 		&i.Metadata,
 		&i.CreatedAt,
@@ -244,17 +268,33 @@ func (q *Queries) CreateVariation(ctx context.Context, arg CreateVariationParams
 	return i, err
 }
 
-const deleteBrand = `-- name: DeleteBrand :exec
-DELETE FROM brand WHERE id = $1
+const deleteBrand = `-- name: DeleteBrand :one
+DELETE FROM brands
+WHERE id = $1
+RETURNING id, name, business_id, description, logo, is_active, metadata, created_at, updated_at
 `
 
-func (q *Queries) DeleteBrand(ctx context.Context, id int32) error {
-	_, err := q.db.ExecContext(ctx, deleteBrand, id)
-	return err
+func (q *Queries) DeleteBrand(ctx context.Context, id int32) (Brand, error) {
+	row := q.db.QueryRowContext(ctx, deleteBrand, id)
+	var i Brand
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.BusinessID,
+		&i.Description,
+		&i.Logo,
+		&i.IsActive,
+		&i.Metadata,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const deleteCategory = `-- name: DeleteCategory :exec
-DELETE FROM category WHERE id = $1
+DELETE FROM categories
+WHERE id = $1
+RETURNING id, name, business_id, parent_id, description, is_active, metadata, created_at, updated_at
 `
 
 func (q *Queries) DeleteCategory(ctx context.Context, id int32) error {
@@ -263,9 +303,9 @@ func (q *Queries) DeleteCategory(ctx context.Context, id int32) error {
 }
 
 const deleteColor = `-- name: DeleteColor :exec
-DELETE FROM color
+DELETE FROM colors
 WHERE id = $1
-RETURNING id, name, metadata, created_at, updated_at
+RETURNING id, business_id, name, metadata, created_at, updated_at
 `
 
 func (q *Queries) DeleteColor(ctx context.Context, id int32) error {
@@ -274,7 +314,7 @@ func (q *Queries) DeleteColor(ctx context.Context, id int32) error {
 }
 
 const deleteInventory = `-- name: DeleteInventory :exec
-DELETE FROM inventory WHERE id = $1
+DELETE FROM inventories WHERE id = $1
 `
 
 func (q *Queries) DeleteInventory(ctx context.Context, id int32) error {
@@ -282,17 +322,33 @@ func (q *Queries) DeleteInventory(ctx context.Context, id int32) error {
 	return err
 }
 
-const deleteItem = `-- name: DeleteItem :exec
-DELETE FROM item WHERE id = $1
+const deleteItem = `-- name: DeleteItem :one
+DELETE FROM items
+WHERE id = $1
+RETURNING id, business_id, brand_id, category_id, name, description, item_type, is_active, metadata, created_at, updated_at
 `
 
-func (q *Queries) DeleteItem(ctx context.Context, id int32) error {
-	_, err := q.db.ExecContext(ctx, deleteItem, id)
-	return err
+func (q *Queries) DeleteItem(ctx context.Context, id int32) (Item, error) {
+	row := q.db.QueryRowContext(ctx, deleteItem, id)
+	var i Item
+	err := row.Scan(
+		&i.ID,
+		&i.BusinessID,
+		&i.BrandID,
+		&i.CategoryID,
+		&i.Name,
+		&i.Description,
+		&i.ItemType,
+		&i.IsActive,
+		&i.Metadata,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const deleteItemImage = `-- name: DeleteItemImage :exec
-DELETE FROM item_image WHERE id = $1
+DELETE FROM item_images WHERE id = $1
 `
 
 func (q *Queries) DeleteItemImage(ctx context.Context, id int32) error {
@@ -301,9 +357,9 @@ func (q *Queries) DeleteItemImage(ctx context.Context, id int32) error {
 }
 
 const deleteUnit = `-- name: DeleteUnit :exec
-DELETE FROM unit
+DELETE FROM units
 WHERE id = $1
-RETURNING id, name, short_code, metadata, created_at, updated_at
+RETURNING id, business_id, name, short_code, metadata, is_active, created_at, updated_at
 `
 
 func (q *Queries) DeleteUnit(ctx context.Context, id int32) error {
@@ -311,17 +367,39 @@ func (q *Queries) DeleteUnit(ctx context.Context, id int32) error {
 	return err
 }
 
-const deleteVariation = `-- name: DeleteVariation :exec
-DELETE FROM variation WHERE id = $1
+const deleteVariation = `-- name: DeleteVariation :one
+DELETE FROM variations
+WHERE id = $1
+RETURNING id, item_id, sku, name, unit_id, size, color_id, barcode, cost_price, base_price, reorder_level, is_active, metadata, created_at, updated_at
 `
 
-func (q *Queries) DeleteVariation(ctx context.Context, id int32) error {
-	_, err := q.db.ExecContext(ctx, deleteVariation, id)
-	return err
+func (q *Queries) DeleteVariation(ctx context.Context, id int32) (Variation, error) {
+	row := q.db.QueryRowContext(ctx, deleteVariation, id)
+	var i Variation
+	err := row.Scan(
+		&i.ID,
+		&i.ItemID,
+		&i.Sku,
+		&i.Name,
+		&i.UnitID,
+		&i.Size,
+		&i.ColorID,
+		&i.Barcode,
+		&i.CostPrice,
+		&i.BasePrice,
+		&i.ReorderLevel,
+		&i.IsActive,
+		&i.Metadata,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const getBrand = `-- name: GetBrand :one
-SELECT id, name, description, logo, is_active, metadata, created_at, updated_at FROM brand WHERE id = $1 LIMIT 1
+SELECT id, name, business_id, description, logo, is_active, metadata, created_at, updated_at FROM brands
+WHERE id = $1
+LIMIT 1
 `
 
 func (q *Queries) GetBrand(ctx context.Context, id int32) (Brand, error) {
@@ -330,6 +408,7 @@ func (q *Queries) GetBrand(ctx context.Context, id int32) (Brand, error) {
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.BusinessID,
 		&i.Description,
 		&i.Logo,
 		&i.IsActive,
@@ -341,7 +420,9 @@ func (q *Queries) GetBrand(ctx context.Context, id int32) (Brand, error) {
 }
 
 const getCategory = `-- name: GetCategory :one
-SELECT id, name, parent_id, description, is_active, metadata, created_at, updated_at FROM category WHERE id = $1 LIMIT 1
+SELECT id, name, business_id, parent_id, description, is_active, metadata, created_at, updated_at FROM categories
+WHERE id = $1
+LIMIT 1
 `
 
 func (q *Queries) GetCategory(ctx context.Context, id int32) (Category, error) {
@@ -350,6 +431,7 @@ func (q *Queries) GetCategory(ctx context.Context, id int32) (Category, error) {
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.BusinessID,
 		&i.ParentID,
 		&i.Description,
 		&i.IsActive,
@@ -361,7 +443,7 @@ func (q *Queries) GetCategory(ctx context.Context, id int32) (Category, error) {
 }
 
 const getColorByID = `-- name: GetColorByID :one
-SELECT id, name, metadata, created_at, updated_at FROM color
+SELECT id, business_id, name, metadata, created_at, updated_at FROM colors
 WHERE id = $1
 `
 
@@ -370,6 +452,7 @@ func (q *Queries) GetColorByID(ctx context.Context, id int32) (Color, error) {
 	var i Color
 	err := row.Scan(
 		&i.ID,
+		&i.BusinessID,
 		&i.Name,
 		&i.Metadata,
 		&i.CreatedAt,
@@ -379,7 +462,7 @@ func (q *Queries) GetColorByID(ctx context.Context, id int32) (Color, error) {
 }
 
 const getColorByName = `-- name: GetColorByName :one
-SELECT id, name, metadata, created_at, updated_at FROM color
+SELECT id, business_id, name, metadata, created_at, updated_at FROM colors
 WHERE name = $1
 `
 
@@ -388,6 +471,7 @@ func (q *Queries) GetColorByName(ctx context.Context, name string) (Color, error
 	var i Color
 	err := row.Scan(
 		&i.ID,
+		&i.BusinessID,
 		&i.Name,
 		&i.Metadata,
 		&i.CreatedAt,
@@ -397,7 +481,7 @@ func (q *Queries) GetColorByName(ctx context.Context, name string) (Color, error
 }
 
 const getInventoryByStore = `-- name: GetInventoryByStore :many
-SELECT id, store_id, variation_id, quantity, metadata, last_updated FROM inventory WHERE store_id = $1
+SELECT id, store_id, variation_id, quantity, metadata, last_updated FROM inventories WHERE store_id = $1
 `
 
 func (q *Queries) GetInventoryByStore(ctx context.Context, storeID int32) ([]Inventory, error) {
@@ -431,7 +515,7 @@ func (q *Queries) GetInventoryByStore(ctx context.Context, storeID int32) ([]Inv
 }
 
 const getInventoryItem = `-- name: GetInventoryItem :one
-SELECT id, store_id, variation_id, quantity, metadata, last_updated FROM inventory
+SELECT id, store_id, variation_id, quantity, metadata, last_updated FROM inventories
 WHERE store_id = $1 AND variation_id = $2
 LIMIT 1
 `
@@ -456,7 +540,9 @@ func (q *Queries) GetInventoryItem(ctx context.Context, arg GetInventoryItemPara
 }
 
 const getItem = `-- name: GetItem :one
-SELECT id, brand_id, category_id, name, description, item_type, is_active, no_variants, metadata, created_at, updated_at FROM item WHERE id = $1 LIMIT 1
+SELECT id, business_id, brand_id, category_id, name, description, item_type, is_active, metadata, created_at, updated_at FROM items
+WHERE id = $1
+LIMIT 1
 `
 
 func (q *Queries) GetItem(ctx context.Context, id int32) (Item, error) {
@@ -464,13 +550,13 @@ func (q *Queries) GetItem(ctx context.Context, id int32) (Item, error) {
 	var i Item
 	err := row.Scan(
 		&i.ID,
+		&i.BusinessID,
 		&i.BrandID,
 		&i.CategoryID,
 		&i.Name,
 		&i.Description,
 		&i.ItemType,
 		&i.IsActive,
-		&i.NoVariants,
 		&i.Metadata,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -479,7 +565,7 @@ func (q *Queries) GetItem(ctx context.Context, id int32) (Item, error) {
 }
 
 const getItemImagesByItem = `-- name: GetItemImagesByItem :many
-SELECT id, item_id, variation_id, url, is_primary, metadata, created_at FROM item_image WHERE item_id = $1
+SELECT id, item_id, variation_id, url, is_primary, metadata, created_at FROM item_images WHERE item_id = $1
 `
 
 func (q *Queries) GetItemImagesByItem(ctx context.Context, itemID sql.NullInt32) ([]ItemImage, error) {
@@ -514,7 +600,7 @@ func (q *Queries) GetItemImagesByItem(ctx context.Context, itemID sql.NullInt32)
 }
 
 const getItemImagesByVariation = `-- name: GetItemImagesByVariation :many
-SELECT id, item_id, variation_id, url, is_primary, metadata, created_at FROM item_image WHERE variation_id = $1
+SELECT id, item_id, variation_id, url, is_primary, metadata, created_at FROM item_images WHERE variation_id = $1
 `
 
 func (q *Queries) GetItemImagesByVariation(ctx context.Context, variationID sql.NullInt32) ([]ItemImage, error) {
@@ -549,7 +635,7 @@ func (q *Queries) GetItemImagesByVariation(ctx context.Context, variationID sql.
 }
 
 const getUnitByID = `-- name: GetUnitByID :one
-SELECT id, name, short_code, metadata, created_at, updated_at FROM unit
+SELECT id, business_id, name, short_code, metadata, is_active, created_at, updated_at FROM units
 WHERE id = $1
 `
 
@@ -558,9 +644,11 @@ func (q *Queries) GetUnitByID(ctx context.Context, id int32) (Unit, error) {
 	var i Unit
 	err := row.Scan(
 		&i.ID,
+		&i.BusinessID,
 		&i.Name,
 		&i.ShortCode,
 		&i.Metadata,
+		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -568,7 +656,9 @@ func (q *Queries) GetUnitByID(ctx context.Context, id int32) (Unit, error) {
 }
 
 const getVariation = `-- name: GetVariation :one
-SELECT id, item_id, sku, name, unit_id, size, color_id, barcode, base_price, reorder_level, is_default, is_active, metadata, created_at, updated_at FROM variation WHERE id = $1 LIMIT 1
+SELECT id, item_id, sku, name, unit_id, size, color_id, barcode, cost_price, base_price, reorder_level, is_active, metadata, created_at, updated_at FROM variations
+WHERE id = $1
+LIMIT 1
 `
 
 func (q *Queries) GetVariation(ctx context.Context, id int32) (Variation, error) {
@@ -583,9 +673,9 @@ func (q *Queries) GetVariation(ctx context.Context, id int32) (Variation, error)
 		&i.Size,
 		&i.ColorID,
 		&i.Barcode,
+		&i.CostPrice,
 		&i.BasePrice,
 		&i.ReorderLevel,
-		&i.IsDefault,
 		&i.IsActive,
 		&i.Metadata,
 		&i.CreatedAt,
@@ -594,12 +684,14 @@ func (q *Queries) GetVariation(ctx context.Context, id int32) (Variation, error)
 	return i, err
 }
 
-const listBrands = `-- name: ListBrands :many
-SELECT id, name, description, logo, is_active, metadata, created_at, updated_at FROM brand ORDER BY name
+const listBrandsByBusiness = `-- name: ListBrandsByBusiness :many
+SELECT id, name, business_id, description, logo, is_active, metadata, created_at, updated_at FROM brands
+WHERE business_id = $1
+ORDER BY name
 `
 
-func (q *Queries) ListBrands(ctx context.Context) ([]Brand, error) {
-	rows, err := q.db.QueryContext(ctx, listBrands)
+func (q *Queries) ListBrandsByBusiness(ctx context.Context, businessID int32) ([]Brand, error) {
+	rows, err := q.db.QueryContext(ctx, listBrandsByBusiness, businessID)
 	if err != nil {
 		return nil, err
 	}
@@ -610,6 +702,7 @@ func (q *Queries) ListBrands(ctx context.Context) ([]Brand, error) {
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
+			&i.BusinessID,
 			&i.Description,
 			&i.Logo,
 			&i.IsActive,
@@ -630,12 +723,14 @@ func (q *Queries) ListBrands(ctx context.Context) ([]Brand, error) {
 	return items, nil
 }
 
-const listCategories = `-- name: ListCategories :many
-SELECT id, name, parent_id, description, is_active, metadata, created_at, updated_at FROM category ORDER BY name
+const listCategoriesByBusiness = `-- name: ListCategoriesByBusiness :many
+SELECT id, name, business_id, parent_id, description, is_active, metadata, created_at, updated_at FROM categories
+WHERE business_id = $1
+ORDER BY name
 `
 
-func (q *Queries) ListCategories(ctx context.Context) ([]Category, error) {
-	rows, err := q.db.QueryContext(ctx, listCategories)
+func (q *Queries) ListCategoriesByBusiness(ctx context.Context, businessID int32) ([]Category, error) {
+	rows, err := q.db.QueryContext(ctx, listCategoriesByBusiness, businessID)
 	if err != nil {
 		return nil, err
 	}
@@ -646,6 +741,7 @@ func (q *Queries) ListCategories(ctx context.Context) ([]Category, error) {
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
+			&i.BusinessID,
 			&i.ParentID,
 			&i.Description,
 			&i.IsActive,
@@ -667,7 +763,7 @@ func (q *Queries) ListCategories(ctx context.Context) ([]Category, error) {
 }
 
 const listColors = `-- name: ListColors :many
-SELECT id, name, metadata, created_at, updated_at FROM color
+SELECT id, business_id, name, metadata, created_at, updated_at FROM colors
 ORDER BY id
 `
 
@@ -682,6 +778,7 @@ func (q *Queries) ListColors(ctx context.Context) ([]Color, error) {
 		var i Color
 		if err := rows.Scan(
 			&i.ID,
+			&i.BusinessID,
 			&i.Name,
 			&i.Metadata,
 			&i.CreatedAt,
@@ -700,12 +797,14 @@ func (q *Queries) ListColors(ctx context.Context) ([]Color, error) {
 	return items, nil
 }
 
-const listItems = `-- name: ListItems :many
-SELECT id, brand_id, category_id, name, description, item_type, is_active, no_variants, metadata, created_at, updated_at FROM item ORDER BY name
+const listItemsByBusiness = `-- name: ListItemsByBusiness :many
+SELECT id, business_id, brand_id, category_id, name, description, item_type, is_active, metadata, created_at, updated_at FROM items
+WHERE business_id = $1
+ORDER BY name
 `
 
-func (q *Queries) ListItems(ctx context.Context) ([]Item, error) {
-	rows, err := q.db.QueryContext(ctx, listItems)
+func (q *Queries) ListItemsByBusiness(ctx context.Context, businessID int32) ([]Item, error) {
+	rows, err := q.db.QueryContext(ctx, listItemsByBusiness, businessID)
 	if err != nil {
 		return nil, err
 	}
@@ -715,13 +814,13 @@ func (q *Queries) ListItems(ctx context.Context) ([]Item, error) {
 		var i Item
 		if err := rows.Scan(
 			&i.ID,
+			&i.BusinessID,
 			&i.BrandID,
 			&i.CategoryID,
 			&i.Name,
 			&i.Description,
 			&i.ItemType,
 			&i.IsActive,
-			&i.NoVariants,
 			&i.Metadata,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -740,7 +839,9 @@ func (q *Queries) ListItems(ctx context.Context) ([]Item, error) {
 }
 
 const listItemsByCategory = `-- name: ListItemsByCategory :many
-SELECT id, brand_id, category_id, name, description, item_type, is_active, no_variants, metadata, created_at, updated_at FROM item WHERE category_id = $1 ORDER BY name
+SELECT id, business_id, brand_id, category_id, name, description, item_type, is_active, metadata, created_at, updated_at FROM items
+WHERE category_id = $1
+ORDER BY name
 `
 
 func (q *Queries) ListItemsByCategory(ctx context.Context, categoryID int32) ([]Item, error) {
@@ -754,13 +855,13 @@ func (q *Queries) ListItemsByCategory(ctx context.Context, categoryID int32) ([]
 		var i Item
 		if err := rows.Scan(
 			&i.ID,
+			&i.BusinessID,
 			&i.BrandID,
 			&i.CategoryID,
 			&i.Name,
 			&i.Description,
 			&i.ItemType,
 			&i.IsActive,
-			&i.NoVariants,
 			&i.Metadata,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -779,7 +880,7 @@ func (q *Queries) ListItemsByCategory(ctx context.Context, categoryID int32) ([]
 }
 
 const listUnits = `-- name: ListUnits :many
-SELECT id, name, short_code, metadata, created_at, updated_at FROM unit
+SELECT id, business_id, name, short_code, metadata, is_active, created_at, updated_at FROM units
 ORDER BY id
 `
 
@@ -794,9 +895,11 @@ func (q *Queries) ListUnits(ctx context.Context) ([]Unit, error) {
 		var i Unit
 		if err := rows.Scan(
 			&i.ID,
+			&i.BusinessID,
 			&i.Name,
 			&i.ShortCode,
 			&i.Metadata,
+			&i.IsActive,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -814,7 +917,9 @@ func (q *Queries) ListUnits(ctx context.Context) ([]Unit, error) {
 }
 
 const listVariationsByItem = `-- name: ListVariationsByItem :many
-SELECT id, item_id, sku, name, unit_id, size, color_id, barcode, base_price, reorder_level, is_default, is_active, metadata, created_at, updated_at FROM variation WHERE item_id = $1 ORDER BY name
+SELECT id, item_id, sku, name, unit_id, size, color_id, barcode, cost_price, base_price, reorder_level, is_active, metadata, created_at, updated_at FROM variations
+WHERE item_id = $1
+ORDER BY name
 `
 
 func (q *Queries) ListVariationsByItem(ctx context.Context, itemID int32) ([]Variation, error) {
@@ -835,9 +940,9 @@ func (q *Queries) ListVariationsByItem(ctx context.Context, itemID int32) ([]Var
 			&i.Size,
 			&i.ColorID,
 			&i.Barcode,
+			&i.CostPrice,
 			&i.BasePrice,
 			&i.ReorderLevel,
-			&i.IsDefault,
 			&i.IsActive,
 			&i.Metadata,
 			&i.CreatedAt,
@@ -857,14 +962,14 @@ func (q *Queries) ListVariationsByItem(ctx context.Context, itemID int32) ([]Var
 }
 
 const updateBrand = `-- name: UpdateBrand :one
-UPDATE brand
+UPDATE brands
 SET name = $2,
-    description = $3,
-    logo = $4,
-    is_active = $5,
+    description = COALESCE($3, description),
+    logo = COALESCE($4, logo),
+    is_active = COALESCE($5, is_active),
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, name, description, logo, is_active, metadata, created_at, updated_at
+RETURNING id, name, business_id, description, logo, is_active, metadata, created_at, updated_at
 `
 
 type UpdateBrandParams struct {
@@ -887,6 +992,7 @@ func (q *Queries) UpdateBrand(ctx context.Context, arg UpdateBrandParams) (Brand
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.BusinessID,
 		&i.Description,
 		&i.Logo,
 		&i.IsActive,
@@ -898,14 +1004,14 @@ func (q *Queries) UpdateBrand(ctx context.Context, arg UpdateBrandParams) (Brand
 }
 
 const updateCategory = `-- name: UpdateCategory :one
-UPDATE category
+UPDATE categories
 SET name = $2,
-    parent_id = $3,
-    description = $4,
-    is_active = $5,
+    parent_id = COALESCE($3, parent_id),
+    description = COALESCE($4, description),
+    is_active = COALESCE($5, is_active),
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, name, parent_id, description, is_active, metadata, created_at, updated_at
+RETURNING id, name, business_id, parent_id, description, is_active, metadata, created_at, updated_at
 `
 
 type UpdateCategoryParams struct {
@@ -928,6 +1034,7 @@ func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) 
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.BusinessID,
 		&i.ParentID,
 		&i.Description,
 		&i.IsActive,
@@ -939,11 +1046,11 @@ func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) 
 }
 
 const updateColor = `-- name: UpdateColor :one
-UPDATE color
+UPDATE colors
 SET name = $1,
     updated_at = CURRENT_TIMESTAMP
 WHERE id = $2
-RETURNING id, name, metadata, created_at, updated_at
+RETURNING id, business_id, name, metadata, created_at, updated_at
 `
 
 type UpdateColorParams struct {
@@ -956,6 +1063,7 @@ func (q *Queries) UpdateColor(ctx context.Context, arg UpdateColorParams) (Color
 	var i Color
 	err := row.Scan(
 		&i.ID,
+		&i.BusinessID,
 		&i.Name,
 		&i.Metadata,
 		&i.CreatedAt,
@@ -965,7 +1073,7 @@ func (q *Queries) UpdateColor(ctx context.Context, arg UpdateColorParams) (Color
 }
 
 const updateInventoryQuantity = `-- name: UpdateInventoryQuantity :one
-UPDATE inventory
+UPDATE inventories
 SET quantity = $3,
     last_updated = NOW()
 WHERE store_id = $1 AND variation_id = $2
@@ -993,26 +1101,25 @@ func (q *Queries) UpdateInventoryQuantity(ctx context.Context, arg UpdateInvento
 }
 
 const updateItem = `-- name: UpdateItem :one
-UPDATE item
-SET brand_id = COALESCE($2, brand_id),
-    category_id = COALESCE($3, category_id),
-    name = COALESCE($4, name),
-    description = COALESCE($5, description),
-    no_variants = COALESCE($6, no_variants),
+UPDATE items
+SET brand_id = COALESCE($3, brand_id),
+    category_id = COALESCE($4, category_id),
+    name = COALESCE($5, name),
+    description = COALESCE($6, description),
     is_active = COALESCE($7, is_active),
     item_type = COALESCE($8, item_type),
     updated_at = NOW()
-WHERE id = $1
-RETURNING id, brand_id, category_id, name, description, item_type, is_active, no_variants, metadata, created_at, updated_at
+WHERE id = $1 AND business_id = $2
+RETURNING id, business_id, brand_id, category_id, name, description, item_type, is_active, metadata, created_at, updated_at
 `
 
 type UpdateItemParams struct {
 	ID          int32          `json:"id"`
+	BusinessID  int32          `json:"business_id"`
 	BrandID     sql.NullInt32  `json:"brand_id"`
 	CategoryID  sql.NullInt32  `json:"category_id"`
 	Name        sql.NullString `json:"name"`
 	Description sql.NullString `json:"description"`
-	NoVariants  sql.NullBool   `json:"no_variants"`
 	IsActive    sql.NullBool   `json:"is_active"`
 	ItemType    sql.NullString `json:"item_type"`
 }
@@ -1020,24 +1127,24 @@ type UpdateItemParams struct {
 func (q *Queries) UpdateItem(ctx context.Context, arg UpdateItemParams) (Item, error) {
 	row := q.db.QueryRowContext(ctx, updateItem,
 		arg.ID,
+		arg.BusinessID,
 		arg.BrandID,
 		arg.CategoryID,
 		arg.Name,
 		arg.Description,
-		arg.NoVariants,
 		arg.IsActive,
 		arg.ItemType,
 	)
 	var i Item
 	err := row.Scan(
 		&i.ID,
+		&i.BusinessID,
 		&i.BrandID,
 		&i.CategoryID,
 		&i.Name,
 		&i.Description,
 		&i.ItemType,
 		&i.IsActive,
-		&i.NoVariants,
 		&i.Metadata,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -1046,12 +1153,12 @@ func (q *Queries) UpdateItem(ctx context.Context, arg UpdateItemParams) (Item, e
 }
 
 const updateUnit = `-- name: UpdateUnit :one
-UPDATE unit
+UPDATE units
 SET name = $1,
     short_code = $2,
     updated_at = CURRENT_TIMESTAMP
 WHERE id = $3
-RETURNING id, name, short_code, metadata, created_at, updated_at
+RETURNING id, business_id, name, short_code, metadata, is_active, created_at, updated_at
 `
 
 type UpdateUnitParams struct {
@@ -1065,9 +1172,11 @@ func (q *Queries) UpdateUnit(ctx context.Context, arg UpdateUnitParams) (Unit, e
 	var i Unit
 	err := row.Scan(
 		&i.ID,
+		&i.BusinessID,
 		&i.Name,
 		&i.ShortCode,
 		&i.Metadata,
+		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -1075,39 +1184,39 @@ func (q *Queries) UpdateUnit(ctx context.Context, arg UpdateUnitParams) (Unit, e
 }
 
 const updateVariation = `-- name: UpdateVariation :one
-UPDATE variation
-SET sku = $2,
-    name = $3,
-    unit_id = $4,
-    size = $5,
-    color_id = $6,
-    barcode = $7,
-    base_price = $8,
-    reorder_level = $9,
-    is_default = $10,
-    is_active = $11,
+UPDATE variations
+SET sku = COALESCE($3, sku),
+    name = COALESCE($4, name),
+    unit_id = COALESCE($5, unit_id),
+    size = COALESCE($6, size),
+    color_id = COALESCE($7, color_id),
+    barcode = COALESCE($8, barcode),
+    base_price = COALESCE($9, base_price),
+    reorder_level = COALESCE($10, reorder_level),
+    is_active = COALESCE($11, is_active),
     updated_at = NOW()
-WHERE id = $1
-RETURNING id, item_id, sku, name, unit_id, size, color_id, barcode, base_price, reorder_level, is_default, is_active, metadata, created_at, updated_at
+WHERE id = $1 AND item_id = $2
+RETURNING id, item_id, sku, name, unit_id, size, color_id, barcode, cost_price, base_price, reorder_level, is_active, metadata, created_at, updated_at
 `
 
 type UpdateVariationParams struct {
 	ID           int32          `json:"id"`
-	Sku          string         `json:"sku"`
-	Name         string         `json:"name"`
-	UnitID       int32          `json:"unit_id"`
+	ItemID       int32          `json:"item_id"`
+	Sku          sql.NullString `json:"sku"`
+	Name         sql.NullString `json:"name"`
+	UnitID       sql.NullInt32  `json:"unit_id"`
 	Size         sql.NullString `json:"size"`
 	ColorID      sql.NullInt32  `json:"color_id"`
 	Barcode      sql.NullString `json:"barcode"`
-	BasePrice    string         `json:"base_price"`
+	BasePrice    sql.NullString `json:"base_price"`
 	ReorderLevel sql.NullInt32  `json:"reorder_level"`
-	IsDefault    sql.NullBool   `json:"is_default"`
 	IsActive     sql.NullBool   `json:"is_active"`
 }
 
 func (q *Queries) UpdateVariation(ctx context.Context, arg UpdateVariationParams) (Variation, error) {
 	row := q.db.QueryRowContext(ctx, updateVariation,
 		arg.ID,
+		arg.ItemID,
 		arg.Sku,
 		arg.Name,
 		arg.UnitID,
@@ -1116,7 +1225,6 @@ func (q *Queries) UpdateVariation(ctx context.Context, arg UpdateVariationParams
 		arg.Barcode,
 		arg.BasePrice,
 		arg.ReorderLevel,
-		arg.IsDefault,
 		arg.IsActive,
 	)
 	var i Variation
@@ -1129,9 +1237,9 @@ func (q *Queries) UpdateVariation(ctx context.Context, arg UpdateVariationParams
 		&i.Size,
 		&i.ColorID,
 		&i.Barcode,
+		&i.CostPrice,
 		&i.BasePrice,
 		&i.ReorderLevel,
-		&i.IsDefault,
 		&i.IsActive,
 		&i.Metadata,
 		&i.CreatedAt,
@@ -1141,7 +1249,7 @@ func (q *Queries) UpdateVariation(ctx context.Context, arg UpdateVariationParams
 }
 
 const upsertInventory = `-- name: UpsertInventory :one
-INSERT INTO inventory (store_id, variation_id, quantity)
+INSERT INTO inventories (store_id, variation_id, quantity)
 VALUES ($1, $2, $3)
 ON CONFLICT (store_id, variation_id)
 DO UPDATE SET

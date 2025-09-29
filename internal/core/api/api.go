@@ -1,4 +1,4 @@
-package utils
+package api
 
 import (
 	"os"
@@ -8,6 +8,11 @@ import (
 const(
 	INVALID_REQUEST_DATA = "invalid request data"
 	SERVERERROR = "an error ocurred, try again"
+	NOTFOUND = "resource not found"
+	UNAUTHORIZED = "unauthorized access"
+	FORBIDDEN = "forbidden access"
+	CONFLICT = "resource already exists"
+	BADREQUEST = "bad request"
 )
 // Response structure for both success and error responses
 type APIResponse struct {

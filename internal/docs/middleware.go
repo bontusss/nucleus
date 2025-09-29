@@ -20,8 +20,8 @@ type SwaggerConfig struct {
 // DefaultSwaggerConfig returns default Swagger configuration
 func DefaultSwaggerConfig() SwaggerConfig {
 	return SwaggerConfig{
-		Title:       "Hotel ERP API",
-		Description: "This is the Hotel ERP API server. It provides endpoints for managing hotel operations including authentication, point of sale, inventory, and more.",
+		Title:       "Nucleus Business API",
+		Description: "This is the Nucleus Business API server. It provides endpoints for managing hotel operations including authentication, point of sale, inventory, and more.",
 		Version:     "1.0.0",
 		Host:        "localhost:9000",
 		BasePath:    "/api",

@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"nucleus/internal/config"
+	"nucleus/internal/core/api"
 	"nucleus/internal/utils"
 	"nucleus/pkg/jwt"
 	"nucleus/pkg/monitoring/logging"
@@ -109,7 +110,7 @@ func (h *Handler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		log.Println("Error binding JSON:", err)
-		utils.ErrorResponse(c, 400, err.Error())
+		api.ErrorResponse(c, 400, err.Error())
 		return
 	}
 
@@ -121,7 +122,7 @@ func (h *Handler) Login(c *gin.Context) {
 
 	// Validate that at least one identifier is provided
 	if identifier == "" {
-		utils.ErrorResponse(c, 400, "Either email or username must be provided")
+		api.ErrorResponse(c, 400, "Either email or username must be provided")
 		return
 	}
 
@@ -140,7 +141,7 @@ func (h *Handler) Login(c *gin.Context) {
 			strings.Contains(errorMsg, "Too many requests") {
 			status = http.StatusTooManyRequests
 		}
-		utils.ErrorResponse(c, status, errorMsg)
+		api.ErrorResponse(c, status, errorMsg)
 		return
 	}
 
@@ -151,7 +152,7 @@ func (h *Handler) Login(c *gin.Context) {
 		expiry = claims.ExpiresAt.Time
 	}
 
-	utils.SuccessResponse(c, 200, "login successful", LoginResponse{
+	api.SuccessResponse(c, 200, "login successful", LoginResponse{
 		AccessToken:  token,
 		RefreshToken: refreshToken,
 		ExpiredAt:    expiry.Unix(),
@@ -174,7 +175,7 @@ func (h *Handler) Login(c *gin.Context) {
 func (h *Handler) Refresh(c *gin.Context) {
 	var req RefreshRequest
 	if err := c.ShouldBindJSON(&req); err != nil || req.RefreshToken == "" {
-		utils.ErrorResponse(c, 401, "Missing or invalid refresh token")
+		api.ErrorResponse(c, 401, "Missing or invalid refresh token")
 		return
 	}
 
@@ -184,7 +185,7 @@ func (h *Handler) Refresh(c *gin.Context) {
 		if !errors.Is(err, ErrInvalidCredentials) && !errors.Is(err, ErrUserInactive) {
 			status = http.StatusInternalServerError
 		}
-		utils.ErrorResponse(c, status, err.Error())
+		api.ErrorResponse(c, status, err.Error())
 		return
 	}
 
@@ -194,7 +195,7 @@ func (h *Handler) Refresh(c *gin.Context) {
 		expiry = claims.ExpiresAt.Time
 	}
 
-	utils.SuccessResponse(c, 200, "message string", RefreshResponse{
+	api.SuccessResponse(c, 200, "message string", RefreshResponse{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		ExpiresIn:    int(expiry.Unix()),
@@ -215,33 +216,33 @@ func (h *Handler) Refresh(c *gin.Context) {
 func (h *Handler) Logout(c *gin.Context) {
 	authHeader := c.GetHeader(AuthorizationHeader)
 	if authHeader == "" {
-		utils.ErrorResponse(c, 401, "unauthorized")
+		api.ErrorResponse(c, 401, "unauthorized")
 		return
 	}
 	token := strings.TrimSpace(strings.TrimPrefix(authHeader, BearerPrefix))
 	if token == "" || token == authHeader { // No Bearer prefix found
-		utils.ErrorResponse(c, 401, "invalid authorization header format")
+		api.ErrorResponse(c, 401, "invalid authorization header format")
 		return
 	}
 
 	claims, exists := c.Get("claims")
 	if !exists || claims == nil {
-		utils.ErrorResponse(c, 401, "unauthorized")
+		api.ErrorResponse(c, 401, "unauthorized")
 		return
 	}
 
 	jwtClaims, ok := claims.(*jwt.Claims)
 	if !ok {
-		utils.ErrorResponse(c, 401, "invalid claims type")
+		api.ErrorResponse(c, 401, "invalid claims type")
 		return
 	}
 
 	expiry := time.Until(jwtClaims.ExpiresAt.Time)
 	if err := h.service.Logout(c.Request.Context(), token, expiry); err != nil {
-		utils.ErrorResponse(c, 500, err.Error())
+		api.ErrorResponse(c, 500, err.Error())
 		return
 	}
-	utils.SuccessResponse(c, 200, "Logged out successfully", nil)
+	api.SuccessResponse(c, 200, "Logged out successfully", nil)
 }
 
 // RegisterAdminRequest represents the login request payload
@@ -270,7 +271,7 @@ type RegisterAdminRequest struct {
 func (h *Handler) RegisterAdmin(c *gin.Context) {
 	var req RegisterAdminRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.ErrorResponse(c, 400, err.Error())
+		api.ErrorResponse(c, 400, err.Error())
 		return
 	}
 	// Generate verification code and expiry
@@ -280,14 +281,14 @@ func (h *Handler) RegisterAdmin(c *gin.Context) {
 	admin, err := h.service.RegisterAdmin(c, req.Username, req.Email, req.Password, req.FirstName, req.LastName)
 	if err != nil {
 		log.Printf("error registering admin: %v", err)
-		utils.ErrorResponse(c, 500, err.Error())
+		api.ErrorResponse(c, 500, err.Error())
 		return
 	}
 
 	err = h.service.SetEmailVerification(c.Request.Context(), admin.ID, code, expiry)
 	if err != nil {
 		log.Printf("error saving verification code: %v", err)
-		utils.ErrorResponse(c, 500, err.Error())
+		api.ErrorResponse(c, 500, err.Error())
 		return
 	}
 
@@ -300,10 +301,10 @@ func (h *Handler) RegisterAdmin(c *gin.Context) {
 	err = plunk.SendEmail(admin.Email, "Verify your Herp account", emailBody)
 	if err != nil {
 		log.Printf("error sending verification email: %v", err)
-		utils.ErrorResponse(c, 500, fmt.Sprintf("Unable to send email at this time, request a new verification code for %s", admin.Email))
+		api.ErrorResponse(c, 500, fmt.Sprintf("Unable to send email at this time, request a new verification code for %s", admin.Email))
 		return
 	}
-	utils.SuccessResponse(c, 200, "Registration successful", RegisterResponse{
+	api.SuccessResponse(c, 200, "Registration successful", RegisterResponse{
 		ID:              admin.ID,
 		Username:        admin.Username,
 		Email:           admin.Email,
@@ -339,20 +340,20 @@ type VerifyEmailRequest struct {
 func (h *Handler) VerifyEmail(c *gin.Context) {
 	var req VerifyEmailRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.ErrorResponse(c, 400, err.Error())
+		api.ErrorResponse(c, 400, err.Error())
 		return
 	}
 
 	ok, err := h.service.VerifyEmailCode(c.Request.Context(), req.Email, req.Code)
 	if err != nil {
-		utils.ErrorResponse(c, 500, err.Error())
+		api.ErrorResponse(c, 500, err.Error())
 		return
 	}
 	if !ok {
-		utils.ErrorResponse(c, 400, "Invalid or expired code")
+		api.ErrorResponse(c, 400, "Invalid or expired code")
 		return
 	}
-	utils.SuccessResponse(c, 200, "Email verified successfully", nil)
+	api.SuccessResponse(c, 200, "Email verified successfully", nil)
 }
 
 // Forgot Password godoc
@@ -370,12 +371,12 @@ func (h *Handler) VerifyEmail(c *gin.Context) {
 func (h *Handler) ForgotPassword(c *gin.Context) {
 	var req ForgotPasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.ErrorResponse(c, 400, err.Error())
+		api.ErrorResponse(c, 400, err.Error())
 		return
 	}
 	code, err := h.service.ForgotPassword(c.Request.Context(), req.Email)
 	if err != nil {
-		utils.ErrorResponse(c, 404, err.Error())
+		api.ErrorResponse(c, 404, err.Error())
 		return
 	}
 	// Send verification email
@@ -386,10 +387,10 @@ func (h *Handler) ForgotPassword(c *gin.Context) {
 	err = plunk.SendEmail(req.Email, "Reset your password", emailBody)
 	if err != nil {
 		log.Printf("error sending verification email: %v", err)
-		utils.ErrorResponse(c, 500, err.Error())
+		api.ErrorResponse(c, 500, err.Error())
 		return
 	}
-	utils.SuccessResponse(c, 200, "Reset code sent to email", nil)
+	api.SuccessResponse(c, 200, "Reset code sent to email", nil)
 }
 
 // Reset Password godoc
@@ -407,13 +408,13 @@ func (h *Handler) ForgotPassword(c *gin.Context) {
 func (h *Handler) ResetPassword(c *gin.Context) {
 	var req ResetAdminPasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.ErrorResponse(c, 400, err.Error())
+		api.ErrorResponse(c, 400, err.Error())
 		return
 	}
 	err := h.service.ResetAdminPassword(c.Request.Context(), req.Email, req.Code, req.NewPassword)
 	if err != nil {
-		utils.ErrorResponse(c, 400, err.Error())
+		api.ErrorResponse(c, 400, err.Error())
 		return
 	}
-	utils.SuccessResponse(c, 200, "Password reset successful", nil)
+	api.SuccessResponse(c, 200, "Password reset successful", nil)
 }

@@ -79,17 +79,15 @@ func (i *Inventory) CreateItemWithVariations(ctx context.Context, args db.Create
 		return db.Item{}, db.Variation{}, err
 	}
 
-	// Create a default variation if no variants are allowed
-	if item.NoVariants.Valid && item.NoVariants.Bool { // default is true
-		variation, err = txQueries.CreateVariation(ctx, db.CreateVariationParams{
-			ItemID:    item.ID,
-			Sku:       fmt.Sprintf("%s-%d-001", item.Name, item.ID),
-			UnitID:    defaultUnitID,
-			BasePrice: defaultPrice,
-		})
-		if err != nil {
-			return db.Item{}, db.Variation{}, err
-		}
+	// Create a default variation
+	variation, err = txQueries.CreateVariation(ctx, db.CreateVariationParams{
+		ItemID:    item.ID,
+		Sku:       fmt.Sprintf("%s-%d-001", item.Name, item.ID),
+		UnitID:    defaultUnitID,
+		BasePrice: defaultPrice,
+	})
+	if err != nil {
+		return db.Item{}, db.Variation{}, err
 	}
 
 	return item, variation, nil

@@ -62,7 +62,7 @@ func (c *Business) CreateBusinessWithBranch(ctx context.Context, params db.Creat
 
 	// Create a default branch for the business
 	branchParams := db.CreateBranchParams{
-		Name:       "Main Branch",
+		Name:       "Main",
 		BusinessID: business.ID,
 	}
 
@@ -124,8 +124,8 @@ func (c *Business) DeleteBranch(ctx context.Context, id int32) (db.Branch, error
 }
 
 // ListBranch lists branches
-func (c *Business) ListBranches(ctx context.Context) ([]db.Branch, error) {
-	return c.queries.ListBranches(ctx)
+func (c *Business) ListBranches(ctx context.Context, id int32) ([]db.Branch, error) {
+	return c.queries.ListBranches(ctx, id)
 }
 
 func (c *Business) LogActivity(ctx context.Context, params db.LogActivityParams) (db.ActivityLog, error) {

@@ -430,7 +430,7 @@ func (q *Queries) GetAdminPermissions(ctx context.Context, id int32) ([]string, 
 }
 
 const getLoginHistory = `-- name: GetLoginHistory :many
-SELECT id, username_or_email, login_time, ip_address, user_agent, success, error_reason FROM login_history
+SELECT id, username_or_email, login_time, ip_address, user_agent, success, error_reason FROM login_histories
 ORDER BY login_time DESC
 LIMIT $1
 `
@@ -840,7 +840,7 @@ func (q *Queries) LogActivity(ctx context.Context, arg LogActivityParams) (Activ
 }
 
 const logLoginAttempt = `-- name: LogLoginAttempt :exec
-INSERT INTO login_history (username_or_email, ip_address, user_agent, success, error_reason)
+INSERT INTO login_histories (username_or_email, ip_address, user_agent, success, error_reason)
 VALUES ($1, $2, $3, $4, $5)
 RETURNING id, username_or_email, login_time, ip_address, user_agent, success, error_reason
 `

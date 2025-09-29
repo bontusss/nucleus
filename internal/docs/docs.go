@@ -1,5 +1,5 @@
 // Package docs contains the API documentation configuration
-// and swagger specifications for the Hotel ERP system.
+// and swagger specifications for the Nucleus Business system.
 package docs
 
 import (
@@ -13,7 +13,7 @@ const docTemplate = `{
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
         "contact": {
-            "name": "Hotel ERP API Support",
+            "name": "Nucleus Business API Support",
             "email": "support@hotel-erp.com"
         },
         "license": {
@@ -40,10 +40,10 @@ var doc = `{
     "schemes": ["http", "https"],
     "swagger": "2.0",
     "info": {
-        "description": "This is the Hotel ERP API server. It provides endpoints for managing hotel operations including authentication, point of sale, inventory, and more.",
-        "title": "Hotel ERP API",
+        "description": "This is the Nucleus Business API server. It provides endpoints for managing hotel operations including authentication, point of sale, inventory, and more.",
+        "title": "Nucleus Business API",
         "contact": {
-            "name": "Hotel ERP API Support",
+            "name": "Nucleus Business API Support",
             "email": "support@hotel-erp.com"
         },
         "license": {
@@ -526,11 +526,11 @@ func (s *s) ReadDoc() string {
 		Host:             "localhost:9000",
 		BasePath:         "/api",
 		Schemes:          []string{"http", "https"},
-		Title:            "Hotel ERP API",
-		Description:      "This is the Hotel ERP API server. It provides endpoints for managing hotel operations including authentication, point of sale, inventory, and more.",
+		Title:            "Nucleus Business API",
+		Description:      "This is the Nucleus Business API server. It provides endpoints for managing hotel operations including authentication, point of sale, inventory, and more.",
 		InfoInstanceName: "swagger",
 		SwaggerTemplate:  docTemplate,
 	}
-	sInfo.Description = "This is the Hotel ERP API server. It provides endpoints for managing hotel operations including authentication, point of sale, inventory, and more."
+	sInfo.Description = "This is the Nucleus Business API server. It provides endpoints for managing hotel operations including authentication, point of sale, inventory, and more."
 	return doc
 }

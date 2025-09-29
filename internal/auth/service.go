@@ -1,4 +1,4 @@
-// Service provides authentication and authorization functionalities for the hotel ERP system.
+// Service provides authentication and authorization functionalities for the Nucleus Business system.
 // It manages user registration, login, JWT token generation and refresh, session management,
 // email verification, password reset, role and permission management, and activity logging.
 //

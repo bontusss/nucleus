@@ -33,9 +33,10 @@ Notes:
 */
 
 -- Brand: Coca-Cola, Johnnie Walker, Samsung.
-CREATE TABLE brand (
+CREATE TABLE brands (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,
+    business_id INTEGER NOT NULL REFERENCES businesses(id),
     description TEXT,
     logo VARCHAR(255),
     is_active BOOLEAN DEFAULT TRUE,
@@ -45,10 +46,11 @@ CREATE TABLE brand (
 );
 
 -- Category: Drinks → Soft Drinks → Cola.
-CREATE TABLE category (
+CREATE TABLE categories (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
-    parent_id INT REFERENCES category(id) ON DELETE SET NULL,
+    business_id INTEGER NOT NULL REFERENCES businesses(id),
+    parent_id INT REFERENCES categories(id) ON DELETE SET NULL,
     description TEXT,
     is_active BOOLEAN DEFAULT TRUE,
     metadata JSONB DEFAULT '{}',
@@ -58,10 +60,11 @@ CREATE TABLE category (
 );
 
 -- Item: Coca-Cola (abstract, not directly stocked).
-CREATE TABLE item (
+CREATE TABLE items (
     id SERIAL PRIMARY KEY,
-    brand_id INT REFERENCES brand(id) ON DELETE SET NULL,
-    category_id INT NOT NULL REFERENCES category(id) ON DELETE SET NULL,
+    business_id INTEGER NOT NULL REFERENCES businesses(id),
+    brand_id INT REFERENCES brands(id) ON DELETE SET NULL,
+    category_id INT NOT NULL REFERENCES categories(id) ON DELETE SET NULL,
     name VARCHAR(150) NOT NULL,
     description TEXT,
     item_type VARCHAR(20) NOT NULL CHECK(item_type IN ('fixed', 'consumable', 'raw_material', 'for_sale')),
@@ -71,24 +74,34 @@ CREATE TABLE item (
     -- 'raw_material'= Ingredients (flour, sugar) for production
     -- 'for_sale'    = Products sold to customers (drinks, gadgets)
     is_active BOOLEAN DEFAULT TRUE,
-    no_variants BOOLEAN DEFAULT TRUE,
     metadata JSONB DEFAULT '{}',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Supporting tables for standardized attributes
-CREATE TABLE unit (
+-- Supporting tables for standard GENERATED ALWAYS AS (quantity * unit_price) STOREDized attributes
+CREATE TABLE units (
     id SERIAL PRIMARY KEY,
+    business_id INTEGER NOT NULL REFERENCES businesses(id),
     name VARCHAR(20) NOT NULL,  -- e.g. Kilogram, Liter, Piece
     short_code VARCHAR(10),     -- e.g. kg, L, pcs
     metadata JSONB DEFAULT '{}',
+    is_active BOOLEAN,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE color (
+CREATE TABLE unit_conversions (
     id SERIAL PRIMARY KEY,
+    business_id INTEGER NOT NULL REFERENCES businesses(id),
+    from_unit_id INT NOT NULL REFERENCES units(id),
+    to_unit_id INT NOT NULL REFERENCES units(id),
+    factor NUMERIC(12,4) NOT NULL -- e.g., 1 carton = 12 pieces → 12
+);
+
+CREATE TABLE colors (
+    id SERIAL PRIMARY KEY,
+    business_id INTEGER NOT NULL REFERENCES businesses(id),
     name VARCHAR(20) NOT NULL,  -- e.g. Red, Blue, Black
     metadata JSONB DEFAULT '{}',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -96,39 +109,46 @@ CREATE TABLE color (
 );
 
 -- Variation: Coca-Cola 500ml Bottle, Coca-Cola 1L Bottle.
-CREATE TABLE variation (
+CREATE TABLE variations (
     id SERIAL PRIMARY KEY,
-    item_id INT NOT NULL REFERENCES item(id) ON DELETE CASCADE,
+    item_id INT NOT NULL REFERENCES items(id) ON DELETE CASCADE,
     sku VARCHAR(50) NOT NULL UNIQUE,   -- Stock Keeping Unit
     name VARCHAR(100) NOT NULL,        -- e.g. '500ml Bottle'
-    unit_id INT NOT NULL REFERENCES unit(id) ON DELETE SET NULL,
+    unit_id INT NOT NULL REFERENCES units(id) ON DELETE SET NULL,
     size VARCHAR(50),                  -- e.g. '500', 'Large'
-    color_id INT REFERENCES color(id) ON DELETE SET NULL,
+    color_id INT REFERENCES colors(id) ON DELETE SET NULL,
     barcode VARCHAR(50) UNIQUE,        -- Retail barcode
-    base_price NUMERIC(12,2) NOT NULL, -- Default/global price
+    cost_price DECIMAL(12,2),
+    base_price DECIMAL(12,2) NOT NULL, -- Default/global price
     reorder_level INT DEFAULT 5,       -- Minimum stock before reordering
-    is_default BOOLEAN DEFAULT FALSE,  -- True if auto-created default
     is_active BOOLEAN DEFAULT TRUE,
     metadata JSONB DEFAULT '{}',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Store-specific pricing (overrides base_price if exists)
-CREATE TABLE store_price (
+CREATE TABLE variation_taxes (
     id SERIAL PRIMARY KEY,
-    store_id INT NOT NULL REFERENCES store(id) ON DELETE CASCADE,
-    variation_id INT NOT NULL REFERENCES variation(id) ON DELETE CASCADE,
+    variation_id INT NOT NULL REFERENCES variations(id) ON DELETE CASCADE,
+    tax_id INT NOT NULL REFERENCES taxes(id) ON DELETE CASCADE,
+    UNIQUE (variation_id, tax_id)
+);
+
+-- Store-specific pricing (overrides base_price if exists)
+CREATE TABLE store_prices (
+    id SERIAL PRIMARY KEY,
+    store_id INT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+    variation_id INT NOT NULL REFERENCES variations(id) ON DELETE CASCADE,
     price NUMERIC(12,2) NOT NULL,
     metadata JSONB DEFAULT '{}',
     UNIQUE (store_id, variation_id)
 );
 
 -- Images: can belong to either Item or Variation (not both).
-CREATE TABLE item_image (
+CREATE TABLE item_images (
     id SERIAL PRIMARY KEY,
-    item_id INT REFERENCES item(id) ON DELETE CASCADE,
-    variation_id INT REFERENCES variation(id) ON DELETE CASCADE,
+    item_id INT REFERENCES items(id) ON DELETE CASCADE,
+    variation_id INT REFERENCES variations(id) ON DELETE CASCADE,
     url TEXT NOT NULL,
     is_primary BOOLEAN DEFAULT FALSE,
     metadata JSONB DEFAULT '{}',
@@ -141,10 +161,10 @@ CREATE TABLE item_image (
 );
 
 -- Inventory: “Branch 1 Central Store has 50 of Coca-Cola 500ml.”
-CREATE TABLE inventory (
+CREATE TABLE inventories (
     id SERIAL PRIMARY KEY,
-    store_id INT NOT NULL REFERENCES store(id) ON DELETE CASCADE,
-    variation_id INT NOT NULL REFERENCES variation(id) ON DELETE CASCADE,
+    store_id INT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+    variation_id INT NOT NULL REFERENCES variations(id) ON DELETE CASCADE,
     quantity INT NOT NULL DEFAULT 0,
     metadata JSONB DEFAULT '{}',
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -152,27 +172,27 @@ CREATE TABLE inventory (
 );
 
 -- Brand search
-CREATE INDEX idx_brand_name ON brand(name);
+CREATE INDEX idx_brand_name ON brands(name);
 
 -- Category search
-CREATE INDEX idx_category_name ON category(name);
+CREATE INDEX idx_category_name ON categories(name);
 
 -- Item search (by name, type, brand, category)
-CREATE INDEX idx_item_name ON item(name);
-CREATE INDEX idx_item_type ON item(item_type);
-CREATE INDEX idx_item_brand_id ON item(brand_id);
-CREATE INDEX idx_item_category_id ON item(category_id);
+CREATE INDEX idx_item_name ON items(name);
+CREATE INDEX idx_item_type ON items(item_type);
+CREATE INDEX idx_item_brand_id ON items(brand_id);
+CREATE INDEX idx_item_category_id ON items(category_id);
 
 -- Variation search (by SKU, barcode, name)
-CREATE INDEX idx_variation_sku ON variation(sku);
-CREATE INDEX idx_variation_barcode ON variation(barcode);
-CREATE INDEX idx_variation_name ON variation(name);
+CREATE INDEX idx_variation_sku ON variations(sku);
+CREATE INDEX idx_variation_barcode ON variations(barcode);
+CREATE INDEX idx_variation_name ON variations(name);
 
 -- Store price lookup
-CREATE INDEX idx_store_price_store_variation ON store_price(store_id, variation_id);
+CREATE INDEX idx_store_price_store_variation ON store_prices(store_id, variation_id);
 
 -- Inventory lookup (store + variation)
-CREATE INDEX idx_inventory_store_variation ON inventory(store_id, variation_id);
+CREATE INDEX idx_inventory_store_variation ON inventories(store_id, variation_id);
 
 
 /*

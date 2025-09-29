@@ -7,7 +7,7 @@ definitions:
       name:
         type: string
     required:
-    - name
+      - name
     type: object
   auth.CreateUserRequest:
     properties:
@@ -18,8 +18,8 @@ definitions:
         type: string
       gender:
         enum:
-        - male
-        - female
+          - male
+          - female
         type: string
       is_active:
         type: boolean
@@ -35,14 +35,14 @@ definitions:
         minLength: 3
         type: string
     required:
-    - email
-    - first_name
-    - gender
-    - is_active
-    - last_name
-    - password
-    - role_id
-    - username
+      - email
+      - first_name
+      - gender
+      - is_active
+      - last_name
+      - password
+      - role_id
+      - username
     type: object
   auth.ErrorResponse:
     description: Error response payload
@@ -68,7 +68,7 @@ definitions:
         example: admin
         type: string
     required:
-    - password
+      - password
     type: object
   auth.LoginResponse:
     description: Login response payload
@@ -84,7 +84,7 @@ definitions:
         minLength: 8
         type: string
     required:
-    - new_password
+      - new_password
     type: object
   auth.UpdateRoleRequest:
     properties:
@@ -102,8 +102,8 @@ definitions:
         type: string
       gender:
         enum:
-        - male
-        - female
+          - male
+          - female
         type: string
       is_active:
         type: boolean
@@ -144,9 +144,9 @@ definitions:
         example: 100
         type: integer
     required:
-    - category
-    - name
-    - price
+      - category
+      - name
+      - price
     type: object
   pos.CreateSaleRequest:
     description: Create sale request payload
@@ -162,15 +162,15 @@ definitions:
       items:
         description: List of items in the sale
         items:
-          $ref: '#/definitions/pos.SaleItem'
+          $ref: "#/definitions/pos.SaleItem"
         type: array
       tax_rate:
         description: Tax rate percentage
         example: 8.25
         type: number
     required:
-    - customer_id
-    - items
+      - customer_id
+      - items
     type: object
   pos.ErrorResponse:
     description: Error response payload
@@ -256,9 +256,9 @@ definitions:
         example: 2
         type: integer
     required:
-    - item_id
-    - price
-    - quantity
+      - item_id
+      - price
+      - quantity
     type: object
   pos.SaleResponse:
     description: Sale response payload
@@ -282,7 +282,7 @@ definitions:
       items:
         description: List of items in the sale
         items:
-          $ref: '#/definitions/pos.SaleItem'
+          $ref: "#/definitions/pos.SaleItem"
         type: array
       tax_amount:
         description: Tax amount
@@ -298,33 +298,34 @@ definitions:
     properties:
       pagination:
         allOf:
-        - $ref: '#/definitions/pos.PaginationResponse'
+          - $ref: "#/definitions/pos.PaginationResponse"
         description: Pagination information
       sales:
         description: List of sales
         items:
-          $ref: '#/definitions/pos.SaleResponse'
+          $ref: "#/definitions/pos.SaleResponse"
         type: array
     type: object
 host: localhost:9000
 info:
   contact:
     email: support@hotel-erp.com
-    name: Hotel ERP API Support
-  description: This is the Hotel ERP API server. It provides endpoints for managing
+    name: Nucleus Business API Support
+  description:
+    This is the Nucleus Business API server. It provides endpoints for managing
     hotel operations including authentication, point of sale, inventory, and more.
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT
   termsOfService: http://swagger.io/terms/
-  title: Hotel ERP API
+  title: Nucleus Business API
   version: 1.0.0
 paths:
   /api/v1/admin/roles:
     get:
       description: Get a list of all roles in the system
       produces:
-      - application/json
+        - application/json
       responses:
         "200":
           description: List of roles
@@ -338,23 +339,23 @@ paths:
               type: string
             type: object
       security:
-      - BearerAuth: []
+        - BearerAuth: []
       summary: List all roles
       tags:
-      - admin
+        - admin
     post:
       consumes:
-      - application/json
+        - application/json
       description: Create a new role in the system
       parameters:
-      - description: Role creation data
-        in: body
-        name: role
-        required: true
-        schema:
-          $ref: '#/definitions/auth.CreateRoleRequest'
+        - description: Role creation data
+          in: body
+          name: role
+          required: true
+          schema:
+            $ref: "#/definitions/auth.CreateRoleRequest"
       produces:
-      - application/json
+        - application/json
       responses:
         "201":
           description: Role created successfully
@@ -374,19 +375,19 @@ paths:
               type: string
             type: object
       security:
-      - BearerAuth: []
+        - BearerAuth: []
       summary: Create a new role
       tags:
-      - admin
+        - admin
   /api/v1/admin/roles/{id}:
     delete:
       description: Delete a role from the system
       parameters:
-      - description: Role ID
-        in: path
-        name: id
-        required: true
-        type: integer
+        - description: Role ID
+          in: path
+          name: id
+          required: true
+          type: integer
       responses:
         "204":
           description: Role deleted successfully
@@ -403,20 +404,20 @@ paths:
               type: string
             type: object
       security:
-      - BearerAuth: []
+        - BearerAuth: []
       summary: Delete role
       tags:
-      - admin
+        - admin
     get:
       description: Get detailed information about a specific role
       parameters:
-      - description: Role ID
-        in: path
-        name: id
-        required: true
-        type: integer
+        - description: Role ID
+          in: path
+          name: id
+          required: true
+          type: integer
       produces:
-      - application/json
+        - application/json
       responses:
         "200":
           description: Role details
@@ -442,28 +443,28 @@ paths:
               type: string
             type: object
       security:
-      - BearerAuth: []
+        - BearerAuth: []
       summary: Get role by ID
       tags:
-      - admin
+        - admin
     put:
       consumes:
-      - application/json
+        - application/json
       description: Update role information
       parameters:
-      - description: Role ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Role update data
-        in: body
-        name: role
-        required: true
-        schema:
-          $ref: '#/definitions/auth.UpdateRoleRequest'
+        - description: Role ID
+          in: path
+          name: id
+          required: true
+          type: integer
+        - description: Role update data
+          in: body
+          name: role
+          required: true
+          schema:
+            $ref: "#/definitions/auth.UpdateRoleRequest"
       produces:
-      - application/json
+        - application/json
       responses:
         "200":
           description: Role updated successfully
@@ -483,15 +484,15 @@ paths:
               type: string
             type: object
       security:
-      - BearerAuth: []
+        - BearerAuth: []
       summary: Update role
       tags:
-      - admin
+        - admin
   /api/v1/admin/users:
     get:
       description: Get a list of all users in the system
       produces:
-      - application/json
+        - application/json
       responses:
         "200":
           description: List of users
@@ -507,23 +508,23 @@ paths:
               type: string
             type: object
       security:
-      - BearerAuth: []
+        - BearerAuth: []
       summary: List all users
       tags:
-      - admin
+        - admin
     post:
       consumes:
-      - application/json
+        - application/json
       description: Create a new user account with role assignment
       parameters:
-      - description: User creation data
-        in: body
-        name: user
-        required: true
-        schema:
-          $ref: '#/definitions/auth.CreateUserRequest'
+        - description: User creation data
+          in: body
+          name: user
+          required: true
+          schema:
+            $ref: "#/definitions/auth.CreateUserRequest"
       produces:
-      - application/json
+        - application/json
       responses:
         "201":
           description: User created successfully
@@ -543,19 +544,19 @@ paths:
               type: string
             type: object
       security:
-      - BearerAuth: []
+        - BearerAuth: []
       summary: Create a new user
       tags:
-      - admin
+        - admin
   /api/v1/admin/users/{id}:
     delete:
       description: Delete a user account from the system
       parameters:
-      - description: User ID
-        in: path
-        name: id
-        required: true
-        type: integer
+        - description: User ID
+          in: path
+          name: id
+          required: true
+          type: integer
       responses:
         "204":
           description: User deleted successfully
@@ -572,20 +573,20 @@ paths:
               type: string
             type: object
       security:
-      - BearerAuth: []
+        - BearerAuth: []
       summary: Delete user
       tags:
-      - admin
+        - admin
     get:
       description: Get detailed information about a specific user
       parameters:
-      - description: User ID
-        in: path
-        name: id
-        required: true
-        type: integer
+        - description: User ID
+          in: path
+          name: id
+          required: true
+          type: integer
       produces:
-      - application/json
+        - application/json
       responses:
         "200":
           description: User details
@@ -611,28 +612,28 @@ paths:
               type: string
             type: object
       security:
-      - BearerAuth: []
+        - BearerAuth: []
       summary: Get user by ID
       tags:
-      - admin
+        - admin
     put:
       consumes:
-      - application/json
+        - application/json
       description: Update user account information and settings
       parameters:
-      - description: User ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: User update data
-        in: body
-        name: user
-        required: true
-        schema:
-          $ref: '#/definitions/auth.UpdateUserRequest'
+        - description: User ID
+          in: path
+          name: id
+          required: true
+          type: integer
+        - description: User update data
+          in: body
+          name: user
+          required: true
+          schema:
+            $ref: "#/definitions/auth.UpdateUserRequest"
       produces:
-      - application/json
+        - application/json
       responses:
         "200":
           description: User updated successfully
@@ -652,27 +653,27 @@ paths:
               type: string
             type: object
       security:
-      - BearerAuth: []
+        - BearerAuth: []
       summary: Update user information
       tags:
-      - admin
+        - admin
   /api/v1/admin/users/{id}/reset-password:
     post:
       consumes:
-      - application/json
+        - application/json
       description: Reset password for a specific user
       parameters:
-      - description: User ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: New password data
-        in: body
-        name: password
-        required: true
-        schema:
-          $ref: '#/definitions/auth.ResetPasswordRequest'
+        - description: User ID
+          in: path
+          name: id
+          required: true
+          type: integer
+        - description: New password data
+          in: body
+          name: password
+          required: true
+          schema:
+            $ref: "#/definitions/auth.ResetPasswordRequest"
       responses:
         "204":
           description: Password reset successfully
@@ -689,171 +690,172 @@ paths:
               type: string
             type: object
       security:
-      - BearerAuth: []
+        - BearerAuth: []
       summary: Reset user password
       tags:
-      - admin
+        - admin
   /auth/login:
     post:
       consumes:
-      - application/json
+        - application/json
       description: Authenticate user with email or username and return JWT token
       parameters:
-      - description: Login credentials (email or username)
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/auth.LoginRequest'
+        - description: Login credentials (email or username)
+          in: body
+          name: body
+          required: true
+          schema:
+            $ref: "#/definitions/auth.LoginRequest"
       produces:
-      - application/json
+        - application/json
       responses:
         "200":
           description: Login successful
           schema:
-            $ref: '#/definitions/auth.LoginResponse'
+            $ref: "#/definitions/auth.LoginResponse"
         "400":
           description: Bad request
           schema:
-            $ref: '#/definitions/auth.ErrorResponse'
+            $ref: "#/definitions/auth.ErrorResponse"
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/auth.ErrorResponse'
+            $ref: "#/definitions/auth.ErrorResponse"
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/auth.ErrorResponse'
+            $ref: "#/definitions/auth.ErrorResponse"
       summary: User login
       tags:
-      - auth
+        - auth
   /pos/items:
     post:
       consumes:
-      - application/json
+        - application/json
       description: Create a new inventory item
       parameters:
-      - description: Item details
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/pos.CreateItemRequest'
+        - description: Item details
+          in: body
+          name: body
+          required: true
+          schema:
+            $ref: "#/definitions/pos.CreateItemRequest"
       produces:
-      - application/json
+        - application/json
       responses:
         "201":
           description: Item created successfully
           schema:
-            $ref: '#/definitions/pos.ItemResponse'
+            $ref: "#/definitions/pos.ItemResponse"
         "400":
           description: Bad request
           schema:
-            $ref: '#/definitions/pos.ErrorResponse'
+            $ref: "#/definitions/pos.ErrorResponse"
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/pos.ErrorResponse'
+            $ref: "#/definitions/pos.ErrorResponse"
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/pos.ErrorResponse'
+            $ref: "#/definitions/pos.ErrorResponse"
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/pos.ErrorResponse'
+            $ref: "#/definitions/pos.ErrorResponse"
       security:
-      - BearerAuth: []
+        - BearerAuth: []
       summary: Create item
       tags:
-      - pos
+        - pos
   /pos/sales:
     post:
       consumes:
-      - application/json
+        - application/json
       description: Create a new sale transaction
       parameters:
-      - description: Sale details
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/pos.CreateSaleRequest'
+        - description: Sale details
+          in: body
+          name: body
+          required: true
+          schema:
+            $ref: "#/definitions/pos.CreateSaleRequest"
       produces:
-      - application/json
+        - application/json
       responses:
         "201":
           description: Sale created successfully
           schema:
-            $ref: '#/definitions/pos.SaleResponse'
+            $ref: "#/definitions/pos.SaleResponse"
         "400":
           description: Bad request
           schema:
-            $ref: '#/definitions/pos.ErrorResponse'
+            $ref: "#/definitions/pos.ErrorResponse"
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/pos.ErrorResponse'
+            $ref: "#/definitions/pos.ErrorResponse"
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/pos.ErrorResponse'
+            $ref: "#/definitions/pos.ErrorResponse"
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/pos.ErrorResponse'
+            $ref: "#/definitions/pos.ErrorResponse"
       security:
-      - BearerAuth: []
+        - BearerAuth: []
       summary: Create sale
       tags:
-      - pos
+        - pos
   /pos/sales/history:
     get:
       description: Get sales history with optional filters
       parameters:
-      - description: Page number
-        in: query
-        name: page
-        type: integer
-      - description: Number of items per page
-        in: query
-        name: limit
-        type: integer
-      - description: Start date (YYYY-MM-DD)
-        in: query
-        name: start_date
-        type: string
-      - description: End date (YYYY-MM-DD)
-        in: query
-        name: end_date
-        type: string
+        - description: Page number
+          in: query
+          name: page
+          type: integer
+        - description: Number of items per page
+          in: query
+          name: limit
+          type: integer
+        - description: Start date (YYYY-MM-DD)
+          in: query
+          name: start_date
+          type: string
+        - description: End date (YYYY-MM-DD)
+          in: query
+          name: end_date
+          type: string
       produces:
-      - application/json
+        - application/json
       responses:
         "200":
           description: Sales history retrieved successfully
           schema:
-            $ref: '#/definitions/pos.SalesHistoryResponse'
+            $ref: "#/definitions/pos.SalesHistoryResponse"
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/pos.ErrorResponse'
+            $ref: "#/definitions/pos.ErrorResponse"
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/pos.ErrorResponse'
+            $ref: "#/definitions/pos.ErrorResponse"
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/pos.ErrorResponse'
+            $ref: "#/definitions/pos.ErrorResponse"
       security:
-      - BearerAuth: []
+        - BearerAuth: []
       summary: Get sales history
       tags:
-      - pos
+        - pos
 securityDefinitions:
   BearerAuth:
-    description: 'JWT Authorization header using the Bearer scheme. Example: "Authorization:
+    description:
+      'JWT Authorization header using the Bearer scheme. Example: "Authorization:
       Bearer {token}"'
     in: header
     name: Authorization

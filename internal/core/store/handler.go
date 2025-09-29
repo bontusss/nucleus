@@ -5,6 +5,7 @@ import (
 	"fmt"
 	db "nucleus/db/sqlc"
 	"nucleus/internal/auth"
+	"nucleus/internal/core/api"
 	"nucleus/internal/utils"
 	"nucleus/pkg/jwt"
 	"nucleus/pkg/monitoring/logging"
@@ -67,7 +68,7 @@ func (h *Handler) CreateStore(c *gin.Context) {
 	claims, ok := jwt.GetUserFromContext(c)
 	if !ok {
 		h.logger.Errorf("could not get user from context")
-		utils.ErrorResponse(c, 500, utils.SERVERERROR)
+		api.ErrorResponse(c, 500, api.SERVERERROR)
 		return
 	}
 
@@ -101,7 +102,7 @@ func (h *Handler) CreateStore(c *gin.Context) {
 			switch pqErr.Code.Name() {
 			case "unique_violation":
 				if pqErr.Constraint == "unique_central_store_per_branch" {
-					utils.ErrorResponse(c, 400, "A branch can only have one central store")
+					api.ErrorResponse(c, 400, "A branch can only have one central store")
 					return
 				}
 			}
@@ -128,7 +129,7 @@ func (h *Handler) CreateStore(c *gin.Context) {
 		// not returning error to user as business and branch have been created successfully
 	}
 
-	utils.SuccessResponse(c, 201, "store created", storeParams{
+	api.SuccessResponse(c, 201, "store created", storeParams{
 		Name:            store.Name,
 		BranchID:        store.BranchID,
 		Address:         store.Address,

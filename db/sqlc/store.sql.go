@@ -13,7 +13,7 @@ import (
 )
 
 const createStore = `-- name: CreateStore :one
-INSERT INTO store (
+INSERT INTO stores (
     name, description, branch_id, address, phone, email,
     is_active, store_code, store_type, assigned_user, manager_id, metadata
 ) VALUES (
@@ -74,7 +74,7 @@ func (q *Queries) CreateStore(ctx context.Context, arg CreateStoreParams) (Store
 }
 
 const deactivateStore = `-- name: DeactivateStore :one
-UPDATE store
+UPDATE stores
 SET is_active = FALSE,
     updated_at = NOW()
 WHERE id = $1
@@ -105,7 +105,7 @@ func (q *Queries) DeactivateStore(ctx context.Context, id int32) (Store, error) 
 }
 
 const deleteStore = `-- name: DeleteStore :exec
-DELETE FROM store WHERE id = $1
+DELETE FROM stores WHERE id = $1
 `
 
 func (q *Queries) DeleteStore(ctx context.Context, id int32) error {
@@ -114,7 +114,7 @@ func (q *Queries) DeleteStore(ctx context.Context, id int32) error {
 }
 
 const getCentralStoreByBranch = `-- name: GetCentralStoreByBranch :one
-SELECT id, name, description, branch_id, address, phone, email, is_active, store_type, store_code, metadata, created_at, updated_at, assigned_user, manager_id FROM store WHERE branch_id = $1 AND store_type = 'central' LIMIT 1
+SELECT id, name, description, branch_id, address, phone, email, is_active, store_type, store_code, metadata, created_at, updated_at, assigned_user, manager_id FROM stores WHERE branch_id = $1 AND store_type = 'central' LIMIT 1
 `
 
 func (q *Queries) GetCentralStoreByBranch(ctx context.Context, branchID int32) (Store, error) {
@@ -141,7 +141,7 @@ func (q *Queries) GetCentralStoreByBranch(ctx context.Context, branchID int32) (
 }
 
 const getStoreByID = `-- name: GetStoreByID :one
-SELECT id, name, description, branch_id, address, phone, email, is_active, store_type, store_code, metadata, created_at, updated_at, assigned_user, manager_id FROM store WHERE id = $1 LIMIT 1
+SELECT id, name, description, branch_id, address, phone, email, is_active, store_type, store_code, metadata, created_at, updated_at, assigned_user, manager_id FROM stores WHERE id = $1 LIMIT 1
 `
 
 func (q *Queries) GetStoreByID(ctx context.Context, id int32) (Store, error) {
@@ -168,7 +168,7 @@ func (q *Queries) GetStoreByID(ctx context.Context, id int32) (Store, error) {
 }
 
 const getStoresByBranch = `-- name: GetStoresByBranch :many
-SELECT id, name, description, branch_id, address, phone, email, is_active, store_type, store_code, metadata, created_at, updated_at, assigned_user, manager_id FROM store WHERE branch_id = $1 ORDER BY name
+SELECT id, name, description, branch_id, address, phone, email, is_active, store_type, store_code, metadata, created_at, updated_at, assigned_user, manager_id FROM stores WHERE branch_id = $1 ORDER BY name
 `
 
 func (q *Queries) GetStoresByBranch(ctx context.Context, branchID int32) ([]Store, error) {
@@ -211,7 +211,7 @@ func (q *Queries) GetStoresByBranch(ctx context.Context, branchID int32) ([]Stor
 }
 
 const listStores = `-- name: ListStores :many
-SELECT id, name, description, branch_id, address, phone, email, is_active, store_type, store_code, metadata, created_at, updated_at, assigned_user, manager_id FROM store ORDER BY created_at DESC
+SELECT id, name, description, branch_id, address, phone, email, is_active, store_type, store_code, metadata, created_at, updated_at, assigned_user, manager_id FROM stores ORDER BY created_at DESC
 `
 
 func (q *Queries) ListStores(ctx context.Context) ([]Store, error) {
@@ -254,7 +254,7 @@ func (q *Queries) ListStores(ctx context.Context) ([]Store, error) {
 }
 
 const searchStoresByName = `-- name: SearchStoresByName :many
-SELECT id, name, description, branch_id, address, phone, email, is_active, store_type, store_code, metadata, created_at, updated_at, assigned_user, manager_id FROM store
+SELECT id, name, description, branch_id, address, phone, email, is_active, store_type, store_code, metadata, created_at, updated_at, assigned_user, manager_id FROM stores
 WHERE name ILIKE '%' || $1 || '%'
 ORDER BY name
 `
@@ -299,7 +299,7 @@ func (q *Queries) SearchStoresByName(ctx context.Context, dollar_1 sql.NullStrin
 }
 
 const updateStore = `-- name: UpdateStore :one
-UPDATE store
+UPDATE stores
 SET name = COALESCE($2, name),
     description = COALESCE($3, description),
     address = COALESCE($4, address),

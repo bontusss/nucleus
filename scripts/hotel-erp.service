@@ -1,5 +1,5 @@
 [Unit]
-Description=Hotel ERP API Server
+Description=Nucleus Business API Server
 Documentation=https://github.com/your-org/hotel-erp
 After=network.target postgresql.service
 Wants=postgresql.service

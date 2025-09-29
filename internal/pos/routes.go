@@ -3,7 +3,7 @@ package pos
 import (
 	"net/http"
 	"nucleus/internal/auth"
-	"nucleus/internal/utils"
+	"nucleus/internal/core/api"
 	"strconv"
 	"time"
 
@@ -121,7 +121,7 @@ func RegisterRoutes(r *gin.RouterGroup, authSvc *auth.Service) {
 func createSale(c *gin.Context) {
 	var req CreateSaleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.ErrorResponse(c, 400, err.Error())
+		api.ErrorResponse(c, 400, err.Error())
 		return
 	}
 
@@ -137,7 +137,7 @@ func createSale(c *gin.Context) {
 		CreatedAt:      time.Now(),
 	}
 
-	utils.SuccessResponse(c, 201, "", response)
+	api.SuccessResponse(c, 201, "", response)
 }
 
 // GetSalesHistory godoc

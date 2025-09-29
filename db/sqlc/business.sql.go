@@ -13,55 +13,43 @@ import (
 )
 
 const createBranch = `-- name: CreateBranch :one
-INSERT INTO branch (
-    business_id, name, address_one, address_two, country, phone, email, city, state, zip_code, metadata
+INSERT INTO branches (
+    business_id, name, address, phone, email, metadata, is_active
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
-) RETURNING id, business_id, name, address_one, address_two, country, phone, email, city, state, zip_code, metadata, created_at, updated_at
+    $1, $2, $3, $4, $5, $6, $7
+) RETURNING id, business_id, name, address, phone, email, metadata, is_active, created_at, updated_at
 `
 
 type CreateBranchParams struct {
 	BusinessID int32                 `json:"business_id"`
 	Name       string                `json:"name"`
-	AddressOne sql.NullString        `json:"address_one"`
-	AddressTwo sql.NullString        `json:"address_two"`
-	Country    sql.NullString        `json:"country"`
+	Address    sql.NullString        `json:"address"`
 	Phone      sql.NullString        `json:"phone"`
 	Email      sql.NullString        `json:"email"`
-	City       sql.NullString        `json:"city"`
-	State      sql.NullString        `json:"state"`
-	ZipCode    sql.NullString        `json:"zip_code"`
 	Metadata   pqtype.NullRawMessage `json:"metadata"`
+	IsActive   sql.NullBool          `json:"is_active"`
 }
 
 func (q *Queries) CreateBranch(ctx context.Context, arg CreateBranchParams) (Branch, error) {
 	row := q.db.QueryRowContext(ctx, createBranch,
 		arg.BusinessID,
 		arg.Name,
-		arg.AddressOne,
-		arg.AddressTwo,
-		arg.Country,
+		arg.Address,
 		arg.Phone,
 		arg.Email,
-		arg.City,
-		arg.State,
-		arg.ZipCode,
 		arg.Metadata,
+		arg.IsActive,
 	)
 	var i Branch
 	err := row.Scan(
 		&i.ID,
 		&i.BusinessID,
 		&i.Name,
-		&i.AddressOne,
-		&i.AddressTwo,
-		&i.Country,
+		&i.Address,
 		&i.Phone,
 		&i.Email,
-		&i.City,
-		&i.State,
-		&i.ZipCode,
 		&i.Metadata,
+		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -69,34 +57,26 @@ func (q *Queries) CreateBranch(ctx context.Context, arg CreateBranchParams) (Bra
 }
 
 const createBusiness = `-- name: CreateBusiness :one
-INSERT INTO business (
-    owner_id, name, motto, email, website, tax_id, tax_rate,
-    country, logo_url, rounding, currency, timezone, language,
-    low_stock_threshold, allow_overselling, metadata
+INSERT INTO businesses (
+    owner_id, name, motto, email, website, tax_id, vat_number,
+    country, logo_url, metadata
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7,
-    $8, $9, $10, $11, $12, $13,
-    $14, $15, $16
-) RETURNING id, owner_id, name, motto, email, website, tax_id, tax_rate, country, logo_url, rounding, currency, timezone, language, low_stock_threshold, allow_overselling, metadata, created_at, updated_at
+    $8, $9, $10
+) RETURNING id, owner_id, name, motto, email, website, tax_id, vat_number, country, logo_url, metadata, created_at, updated_at
 `
 
 type CreateBusinessParams struct {
-	OwnerID           int32                 `json:"owner_id"`
-	Name              string                `json:"name"`
-	Motto             sql.NullString        `json:"motto"`
-	Email             sql.NullString        `json:"email"`
-	Website           sql.NullString        `json:"website"`
-	TaxID             sql.NullString        `json:"tax_id"`
-	TaxRate           sql.NullString        `json:"tax_rate"`
-	Country           string                `json:"country"`
-	LogoUrl           sql.NullString        `json:"logo_url"`
-	Rounding          sql.NullString        `json:"rounding"`
-	Currency          sql.NullString        `json:"currency"`
-	Timezone          sql.NullString        `json:"timezone"`
-	Language          sql.NullString        `json:"language"`
-	LowStockThreshold sql.NullInt32         `json:"low_stock_threshold"`
-	AllowOverselling  sql.NullBool          `json:"allow_overselling"`
-	Metadata          pqtype.NullRawMessage `json:"metadata"`
+	OwnerID   int32                 `json:"owner_id"`
+	Name      string                `json:"name"`
+	Motto     sql.NullString        `json:"motto"`
+	Email     sql.NullString        `json:"email"`
+	Website   sql.NullString        `json:"website"`
+	TaxID     sql.NullString        `json:"tax_id"`
+	VatNumber sql.NullString        `json:"vat_number"`
+	Country   string                `json:"country"`
+	LogoUrl   sql.NullString        `json:"logo_url"`
+	Metadata  pqtype.NullRawMessage `json:"metadata"`
 }
 
 func (q *Queries) CreateBusiness(ctx context.Context, arg CreateBusinessParams) (Business, error) {
@@ -107,15 +87,9 @@ func (q *Queries) CreateBusiness(ctx context.Context, arg CreateBusinessParams) 
 		arg.Email,
 		arg.Website,
 		arg.TaxID,
-		arg.TaxRate,
+		arg.VatNumber,
 		arg.Country,
 		arg.LogoUrl,
-		arg.Rounding,
-		arg.Currency,
-		arg.Timezone,
-		arg.Language,
-		arg.LowStockThreshold,
-		arg.AllowOverselling,
 		arg.Metadata,
 	)
 	var i Business
@@ -127,15 +101,9 @@ func (q *Queries) CreateBusiness(ctx context.Context, arg CreateBusinessParams) 
 		&i.Email,
 		&i.Website,
 		&i.TaxID,
-		&i.TaxRate,
+		&i.VatNumber,
 		&i.Country,
 		&i.LogoUrl,
-		&i.Rounding,
-		&i.Currency,
-		&i.Timezone,
-		&i.Language,
-		&i.LowStockThreshold,
-		&i.AllowOverselling,
 		&i.Metadata,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -144,8 +112,9 @@ func (q *Queries) CreateBusiness(ctx context.Context, arg CreateBusinessParams) 
 }
 
 const deleteBranch = `-- name: DeleteBranch :one
-DELETE FROM branch WHERE id = $1
-RETURNING id, business_id, name, address_one, address_two, country, phone, email, city, state, zip_code, metadata, created_at, updated_at
+DELETE FROM branches
+WHERE id = $1
+RETURNING id, business_id, name, address, phone, email, metadata, is_active, created_at, updated_at
 `
 
 func (q *Queries) DeleteBranch(ctx context.Context, id int32) (Branch, error) {
@@ -155,15 +124,11 @@ func (q *Queries) DeleteBranch(ctx context.Context, id int32) (Branch, error) {
 		&i.ID,
 		&i.BusinessID,
 		&i.Name,
-		&i.AddressOne,
-		&i.AddressTwo,
-		&i.Country,
+		&i.Address,
 		&i.Phone,
 		&i.Email,
-		&i.City,
-		&i.State,
-		&i.ZipCode,
 		&i.Metadata,
+		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -171,9 +136,9 @@ func (q *Queries) DeleteBranch(ctx context.Context, id int32) (Branch, error) {
 }
 
 const deleteBusiness = `-- name: DeleteBusiness :one
-DELETE FROM business
+DELETE FROM businesses
 WHERE id = $1 AND owner_id = $2
-RETURNING id, owner_id, name, motto, email, website, tax_id, tax_rate, country, logo_url, rounding, currency, timezone, language, low_stock_threshold, allow_overselling, metadata, created_at, updated_at
+RETURNING id, owner_id, name, motto, email, website, tax_id, vat_number, country, logo_url, metadata, created_at, updated_at
 `
 
 type DeleteBusinessParams struct {
@@ -192,15 +157,9 @@ func (q *Queries) DeleteBusiness(ctx context.Context, arg DeleteBusinessParams) 
 		&i.Email,
 		&i.Website,
 		&i.TaxID,
-		&i.TaxRate,
+		&i.VatNumber,
 		&i.Country,
 		&i.LogoUrl,
-		&i.Rounding,
-		&i.Currency,
-		&i.Timezone,
-		&i.Language,
-		&i.LowStockThreshold,
-		&i.AllowOverselling,
 		&i.Metadata,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -208,8 +167,19 @@ func (q *Queries) DeleteBusiness(ctx context.Context, arg DeleteBusinessParams) 
 	return i, err
 }
 
+const deleteTax = `-- name: DeleteTax :exec
+DELETE FROM taxes
+WHERE id = $1
+`
+
+func (q *Queries) DeleteTax(ctx context.Context, id int32) error {
+	_, err := q.db.ExecContext(ctx, deleteTax, id)
+	return err
+}
+
 const getBranch = `-- name: GetBranch :one
-SELECT id, business_id, name, address_one, address_two, country, phone, email, city, state, zip_code, metadata, created_at, updated_at FROM branch WHERE id = $1
+SELECT id, business_id, name, address, phone, email, metadata, is_active, created_at, updated_at FROM branches
+WHERE id = $1
 `
 
 func (q *Queries) GetBranch(ctx context.Context, id int32) (Branch, error) {
@@ -219,15 +189,11 @@ func (q *Queries) GetBranch(ctx context.Context, id int32) (Branch, error) {
 		&i.ID,
 		&i.BusinessID,
 		&i.Name,
-		&i.AddressOne,
-		&i.AddressTwo,
-		&i.Country,
+		&i.Address,
 		&i.Phone,
 		&i.Email,
-		&i.City,
-		&i.State,
-		&i.ZipCode,
 		&i.Metadata,
+		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -235,8 +201,8 @@ func (q *Queries) GetBranch(ctx context.Context, id int32) (Branch, error) {
 }
 
 const getBusiness = `-- name: GetBusiness :one
-SELECT id, owner_id, name, motto, email, website, tax_id, tax_rate, country, logo_url, rounding, currency, timezone, language, low_stock_threshold, allow_overselling, metadata, created_at, updated_at
-FROM business
+SELECT id, owner_id, name, motto, email, website, tax_id, vat_number, country, logo_url, metadata, created_at, updated_at
+FROM businesses
 WHERE id = $1 AND owner_id = $2
 `
 
@@ -256,15 +222,32 @@ func (q *Queries) GetBusiness(ctx context.Context, arg GetBusinessParams) (Busin
 		&i.Email,
 		&i.Website,
 		&i.TaxID,
-		&i.TaxRate,
+		&i.VatNumber,
 		&i.Country,
 		&i.LogoUrl,
-		&i.Rounding,
-		&i.Currency,
-		&i.Timezone,
-		&i.Language,
-		&i.LowStockThreshold,
-		&i.AllowOverselling,
+		&i.Metadata,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getTaxByID = `-- name: GetTaxByID :one
+SELECT id, business_id, name, rate, code, is_active, note, metadata, created_at, updated_at FROM taxes
+WHERE id = $1
+`
+
+func (q *Queries) GetTaxByID(ctx context.Context, id int32) (Tax, error) {
+	row := q.db.QueryRowContext(ctx, getTaxByID, id)
+	var i Tax
+	err := row.Scan(
+		&i.ID,
+		&i.BusinessID,
+		&i.Name,
+		&i.Rate,
+		&i.Code,
+		&i.IsActive,
+		&i.Note,
 		&i.Metadata,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -273,11 +256,13 @@ func (q *Queries) GetBusiness(ctx context.Context, arg GetBusinessParams) (Busin
 }
 
 const listBranches = `-- name: ListBranches :many
-SELECT id, business_id, name, address_one, address_two, country, phone, email, city, state, zip_code, metadata, created_at, updated_at FROM branch ORDER BY created_at DESC
+SELECT id, business_id, name, address, phone, email, metadata, is_active, created_at, updated_at FROM branches
+WHERE business_id = $1
+ORDER BY created_at DESC
 `
 
-func (q *Queries) ListBranches(ctx context.Context) ([]Branch, error) {
-	rows, err := q.db.QueryContext(ctx, listBranches)
+func (q *Queries) ListBranches(ctx context.Context, businessID int32) ([]Branch, error) {
+	rows, err := q.db.QueryContext(ctx, listBranches, businessID)
 	if err != nil {
 		return nil, err
 	}
@@ -289,15 +274,11 @@ func (q *Queries) ListBranches(ctx context.Context) ([]Branch, error) {
 			&i.ID,
 			&i.BusinessID,
 			&i.Name,
-			&i.AddressOne,
-			&i.AddressTwo,
-			&i.Country,
+			&i.Address,
 			&i.Phone,
 			&i.Email,
-			&i.City,
-			&i.State,
-			&i.ZipCode,
 			&i.Metadata,
+			&i.IsActive,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -315,8 +296,8 @@ func (q *Queries) ListBranches(ctx context.Context) ([]Branch, error) {
 }
 
 const listBusinesses = `-- name: ListBusinesses :many
-SELECT id, owner_id, name, motto, email, website, tax_id, tax_rate, country, logo_url, rounding, currency, timezone, language, low_stock_threshold, allow_overselling, metadata, created_at, updated_at
-FROM business
+SELECT id, owner_id, name, motto, email, website, tax_id, vat_number, country, logo_url, metadata, created_at, updated_at
+FROM businesses
 WHERE owner_id = $1
 ORDER BY created_at
 `
@@ -338,15 +319,49 @@ func (q *Queries) ListBusinesses(ctx context.Context, ownerID int32) ([]Business
 			&i.Email,
 			&i.Website,
 			&i.TaxID,
-			&i.TaxRate,
+			&i.VatNumber,
 			&i.Country,
 			&i.LogoUrl,
-			&i.Rounding,
-			&i.Currency,
-			&i.Timezone,
-			&i.Language,
-			&i.LowStockThreshold,
-			&i.AllowOverselling,
+			&i.Metadata,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listTaxes = `-- name: ListTaxes :many
+SELECT id, business_id, name, rate, code, is_active, note, metadata, created_at, updated_at FROM taxes
+WHERE business_id = $1
+ORDER BY created_at DESC
+`
+
+func (q *Queries) ListTaxes(ctx context.Context, businessID int32) ([]Tax, error) {
+	rows, err := q.db.QueryContext(ctx, listTaxes, businessID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Tax{}
+	for rows.Next() {
+		var i Tax
+		if err := rows.Scan(
+			&i.ID,
+			&i.BusinessID,
+			&i.Name,
+			&i.Rate,
+			&i.Code,
+			&i.IsActive,
+			&i.Note,
 			&i.Metadata,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -365,62 +380,48 @@ func (q *Queries) ListBusinesses(ctx context.Context, ownerID int32) ([]Business
 }
 
 const updateBranch = `-- name: UpdateBranch :one
-UPDATE branch SET
-    name = COALESCE($2, name),
-    address_one = COALESCE($2, name),
-    address_two = COALESCE($3, address_two),
-    country = COALESCE($4, country),
-    phone = COALESCE($5, phone),
-    email = COALESCE($6, email),
-    city = COALESCE($7, city),
-    state = COALESCE($8, state),
-    zip_code = COALESCE($9, zip_code),
-    metadata = COALESCE($10, metadata),
+UPDATE branches SET
+    name = COALESCE($1, name),
+    address = COALESCE($2, address),
+    phone = COALESCE($3, phone),
+    email = COALESCE($4, email),
+    metadata = COALESCE($5, metadata),
+    is_active = COALESCE($6, is_active),
     updated_at = CURRENT_TIMESTAMP
-WHERE id = $1
-RETURNING id, business_id, name, address_one, address_two, country, phone, email, city, state, zip_code, metadata, created_at, updated_at
+WHERE id = $7
+RETURNING id, business_id, name, address, phone, email, metadata, is_active, created_at, updated_at
 `
 
 type UpdateBranchParams struct {
-	ID         int32                 `json:"id"`
-	Name       sql.NullString        `json:"name"`
-	AddressTwo sql.NullString        `json:"address_two"`
-	Country    sql.NullString        `json:"country"`
-	Phone      sql.NullString        `json:"phone"`
-	Email      sql.NullString        `json:"email"`
-	City       sql.NullString        `json:"city"`
-	State      sql.NullString        `json:"state"`
-	ZipCode    sql.NullString        `json:"zip_code"`
-	Metadata   pqtype.NullRawMessage `json:"metadata"`
+	Name     sql.NullString        `json:"name"`
+	Address  sql.NullString        `json:"address"`
+	Phone    sql.NullString        `json:"phone"`
+	Email    sql.NullString        `json:"email"`
+	Metadata pqtype.NullRawMessage `json:"metadata"`
+	IsActive sql.NullBool          `json:"is_active"`
+	ID       int32                 `json:"id"`
 }
 
 func (q *Queries) UpdateBranch(ctx context.Context, arg UpdateBranchParams) (Branch, error) {
 	row := q.db.QueryRowContext(ctx, updateBranch,
-		arg.ID,
 		arg.Name,
-		arg.AddressTwo,
-		arg.Country,
+		arg.Address,
 		arg.Phone,
 		arg.Email,
-		arg.City,
-		arg.State,
-		arg.ZipCode,
 		arg.Metadata,
+		arg.IsActive,
+		arg.ID,
 	)
 	var i Branch
 	err := row.Scan(
 		&i.ID,
 		&i.BusinessID,
 		&i.Name,
-		&i.AddressOne,
-		&i.AddressTwo,
-		&i.Country,
+		&i.Address,
 		&i.Phone,
 		&i.Email,
-		&i.City,
-		&i.State,
-		&i.ZipCode,
 		&i.Metadata,
+		&i.IsActive,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -428,45 +429,33 @@ func (q *Queries) UpdateBranch(ctx context.Context, arg UpdateBranchParams) (Bra
 }
 
 const updateBusiness = `-- name: UpdateBusiness :one
-UPDATE business SET
+UPDATE businesses SET
     name = COALESCE($1, name),
     motto = COALESCE($2, motto),
     email = COALESCE($3, email),
     website = COALESCE($4, website),
     tax_id = COALESCE($5, tax_id),
-    tax_rate = COALESCE($6, tax_rate),
+    vat_number = COALESCE($6, vat_number),
     logo_url = COALESCE($7, logo_url),
-    rounding = COALESCE($8, rounding),
-    currency = COALESCE($9, currency),
-    timezone = COALESCE($10, timezone),
-    language = COALESCE($11, language),
-    low_stock_threshold = COALESCE($12, low_stock_threshold),
-    allow_overselling = COALESCE($13, allow_overselling),
-    country = COALESCE($14, country),
-    metadata = COALESCE($15, metadata),
+    country = COALESCE($8, country),
+    metadata = COALESCE($9, metadata),
     updated_at = CURRENT_TIMESTAMP
-WHERE id = $16 AND owner_id = $17
-RETURNING id, owner_id, name, motto, email, website, tax_id, tax_rate, country, logo_url, rounding, currency, timezone, language, low_stock_threshold, allow_overselling, metadata, created_at, updated_at
+WHERE id = $10 AND owner_id = $11
+RETURNING id, owner_id, name, motto, email, website, tax_id, vat_number, country, logo_url, metadata, created_at, updated_at
 `
 
 type UpdateBusinessParams struct {
-	Name              sql.NullString        `json:"name"`
-	Motto             sql.NullString        `json:"motto"`
-	Email             sql.NullString        `json:"email"`
-	Website           sql.NullString        `json:"website"`
-	TaxID             sql.NullString        `json:"tax_id"`
-	TaxRate           sql.NullString        `json:"tax_rate"`
-	LogoUrl           sql.NullString        `json:"logo_url"`
-	Rounding          sql.NullString        `json:"rounding"`
-	Currency          sql.NullString        `json:"currency"`
-	Timezone          sql.NullString        `json:"timezone"`
-	Language          sql.NullString        `json:"language"`
-	LowStockThreshold sql.NullInt32         `json:"low_stock_threshold"`
-	AllowOverselling  sql.NullBool          `json:"allow_overselling"`
-	Country           sql.NullString        `json:"country"`
-	Metadata          pqtype.NullRawMessage `json:"metadata"`
-	ID                int32                 `json:"id"`
-	OwnerID           int32                 `json:"owner_id"`
+	Name      sql.NullString        `json:"name"`
+	Motto     sql.NullString        `json:"motto"`
+	Email     sql.NullString        `json:"email"`
+	Website   sql.NullString        `json:"website"`
+	TaxID     sql.NullString        `json:"tax_id"`
+	VatNumber sql.NullString        `json:"vat_number"`
+	LogoUrl   sql.NullString        `json:"logo_url"`
+	Country   sql.NullString        `json:"country"`
+	Metadata  pqtype.NullRawMessage `json:"metadata"`
+	ID        int32                 `json:"id"`
+	OwnerID   int32                 `json:"owner_id"`
 }
 
 func (q *Queries) UpdateBusiness(ctx context.Context, arg UpdateBusinessParams) (Business, error) {
@@ -476,14 +465,8 @@ func (q *Queries) UpdateBusiness(ctx context.Context, arg UpdateBusinessParams) 
 		arg.Email,
 		arg.Website,
 		arg.TaxID,
-		arg.TaxRate,
+		arg.VatNumber,
 		arg.LogoUrl,
-		arg.Rounding,
-		arg.Currency,
-		arg.Timezone,
-		arg.Language,
-		arg.LowStockThreshold,
-		arg.AllowOverselling,
 		arg.Country,
 		arg.Metadata,
 		arg.ID,
@@ -498,15 +481,61 @@ func (q *Queries) UpdateBusiness(ctx context.Context, arg UpdateBusinessParams) 
 		&i.Email,
 		&i.Website,
 		&i.TaxID,
-		&i.TaxRate,
+		&i.VatNumber,
 		&i.Country,
 		&i.LogoUrl,
-		&i.Rounding,
-		&i.Currency,
-		&i.Timezone,
-		&i.Language,
-		&i.LowStockThreshold,
-		&i.AllowOverselling,
+		&i.Metadata,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateTax = `-- name: UpdateTax :one
+UPDATE taxes
+SET
+    name = COALESCE($1, name),
+    rate = COALESCE($2, rate),
+    code = COALESCE($3, code),
+    is_active = COALESCE($4, is_active),
+    note = COALESCE($5, note),
+    metadata = COALESCE($6, metadata),
+    updated_at = CURRENT_TIMESTAMP
+WHERE id = $7 AND business_id = $8
+RETURNING id, business_id, name, rate, code, is_active, note, metadata, created_at, updated_at
+`
+
+type UpdateTaxParams struct {
+	Name       sql.NullString        `json:"name"`
+	Rate       sql.NullString        `json:"rate"`
+	Code       sql.NullString        `json:"code"`
+	IsActive   sql.NullBool          `json:"is_active"`
+	Note       sql.NullString        `json:"note"`
+	Metadata   pqtype.NullRawMessage `json:"metadata"`
+	ID         int32                 `json:"id"`
+	BusinessID int32                 `json:"business_id"`
+}
+
+func (q *Queries) UpdateTax(ctx context.Context, arg UpdateTaxParams) (Tax, error) {
+	row := q.db.QueryRowContext(ctx, updateTax,
+		arg.Name,
+		arg.Rate,
+		arg.Code,
+		arg.IsActive,
+		arg.Note,
+		arg.Metadata,
+		arg.ID,
+		arg.BusinessID,
+	)
+	var i Tax
+	err := row.Scan(
+		&i.ID,
+		&i.BusinessID,
+		&i.Name,
+		&i.Rate,
+		&i.Code,
+		&i.IsActive,
+		&i.Note,
 		&i.Metadata,
 		&i.CreatedAt,
 		&i.UpdatedAt,

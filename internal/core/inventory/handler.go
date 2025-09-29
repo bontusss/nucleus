@@ -5,6 +5,7 @@ import (
 	"fmt"
 	db "nucleus/db/sqlc"
 	"nucleus/internal/auth"
+	"nucleus/internal/core/api"
 	"nucleus/internal/utils"
 	"nucleus/pkg/jwt"
 	"nucleus/pkg/monitoring/logging"
@@ -87,21 +88,21 @@ func (h *Handler) createBrand(c *gin.Context) {
 	claims, ok := jwt.GetUserFromContext(c)
 	if !ok {
 		h.logger.Errorf("could not get user from context")
-		utils.ErrorResponse(c, 500, utils.SERVERERROR)
+		api.ErrorResponse(c, 500, api.SERVERERROR)
 		return
 	}
 
 	// Parse form-data (multipart) instead of JSON
 	if err := c.Request.ParseMultipartForm(10 << 20); err != nil { // 10MB limit
 		h.logger.Errorf("multipart parse error: %v", err)
-		utils.ErrorResponse(c, 400, utils.INVALID_REQUEST_DATA)
+		api.ErrorResponse(c, 400, err.Error())
 		return
 	}
 
 	var req CreateBrandRequest
 	if err := c.ShouldBind(&req); err != nil {
 		h.logger.Errorf("error binding creating brand request data: %v", err)
-		utils.ErrorResponse(c, 400, utils.INVALID_REQUEST_DATA)
+		api.ErrorResponse(c, 400, err.Error())
 		return
 	}
 
@@ -115,7 +116,7 @@ func (h *Handler) createBrand(c *gin.Context) {
 	err := copier.Copy(&params, &req)
 	if err != nil {
 		h.logger.Errorf("error copying create brand request data: %v", err)
-		utils.ErrorResponse(c, 500, utils.SERVERERROR)
+		api.ErrorResponse(c, 500, err.Error())
 		return
 	}
 
@@ -128,13 +129,13 @@ func (h *Handler) createBrand(c *gin.Context) {
 		if pgErr, ok := err.(*pq.Error); ok {
 			switch pgErr.Code {
 			case "23505": // unique_violation
-				utils.ErrorResponse(c, 400, fmt.Sprintf("brand with name %s already exists", req.Name))
+				api.ErrorResponse(c, 400, fmt.Sprintf("brand with name %s already exists", req.Name))
 				return
 			}
 		}
 
 		h.logger.Errorf("error creating a brand: %v", err)
-		utils.ErrorResponse(c, 500, utils.SERVERERROR)
+		api.ErrorResponse(c, 500, err.Error())
 		return
 	}
 
@@ -148,7 +149,7 @@ func (h *Handler) createBrand(c *gin.Context) {
 		UserAgent:  sql.NullString{Valid: true, String: c.Request.UserAgent()},
 	})
 
-	utils.SuccessResponse(c, 201, "brand created", CreateBrandResponse{
+	api.SuccessResponse(c, 201, "brand created", CreateBrandResponse{
 		ID:          brand.ID,
 		Name:        brand.Name,
 		Description: brand.Description.String,
@@ -190,14 +191,14 @@ func (h *Handler) createCategory(c *gin.Context) {
 	claims, ok := jwt.GetUserFromContext(c)
 	if !ok {
 		h.logger.Errorf("could not get user from context")
-		utils.ErrorResponse(c, 500, utils.SERVERERROR)
+		api.ErrorResponse(c, 500, api.SERVERERROR)
 		return
 	}
 
 	var req Category
 	if err := c.ShouldBind(&req); err != nil {
 		h.logger.Errorf("error binding create category request data: %v", err)
-		utils.ErrorResponse(c, 400, utils.INVALID_REQUEST_DATA)
+		api.ErrorResponse(c, 400, err.Error())
 		return
 	}
 
@@ -205,11 +206,11 @@ func (h *Handler) createCategory(c *gin.Context) {
 	if req.ParentID != nil {
 		_, err := h.service.GetCategory(c, *req.ParentID)
 		if err == sql.ErrNoRows {
-			utils.ErrorResponse(c, 400, fmt.Sprintf("parent category with id %d does not exist", *req.ParentID))
+			api.ErrorResponse(c, 400, fmt.Sprintf("parent category with id %d does not exist", *req.ParentID))
 			return
 		} else if err != nil {
 			h.logger.Errorf("error checking parent category: %v", err)
-			utils.ErrorResponse(c, 500, utils.SERVERERROR)
+			api.ErrorResponse(c, 500, err.Error())
 			return
 		}
 	}
@@ -218,7 +219,7 @@ func (h *Handler) createCategory(c *gin.Context) {
 	err := copier.Copy(&params, &req)
 	if err != nil {
 		h.logger.Errorf("error copying create category request data: %v", err)
-		utils.ErrorResponse(c, 500, utils.SERVERERROR)
+		api.ErrorResponse(c, 500, err.Error())
 		return
 	}
 
@@ -227,13 +228,13 @@ func (h *Handler) createCategory(c *gin.Context) {
 		if pgErr, ok := err.(*pq.Error); ok {
 			switch pgErr.Code {
 			case "23505": // unique_violation
-				utils.ErrorResponse(c, 400, fmt.Sprintf("category with name %s already exists", req.Name))
+				api.ErrorResponse(c, 400, fmt.Sprintf("category with name %s already exists", req.Name))
 				return
 			}
 		}
 
 		h.logger.Errorf("error creating a category: %v", err)
-		utils.ErrorResponse(c, 500, utils.SERVERERROR)
+		api.ErrorResponse(c, 500, err.Error())
 		return
 	}
 
@@ -247,7 +248,7 @@ func (h *Handler) createCategory(c *gin.Context) {
 		UserAgent:  sql.NullString{Valid: true, String: c.Request.UserAgent()},
 	})
 
-	utils.SuccessResponse(c, 201, "created category", CategoryResponse{
+	api.SuccessResponse(c, 201, "created category", CategoryResponse{
 		ID:          category.ID,
 		Name:        category.Name,
 		ParentID:    &category.ParentID.Int32,
@@ -401,7 +402,7 @@ func (h *Handler) createUnit(c *gin.Context) {
 	var req UnitRequest
 	if err := c.ShouldBind(&req); err != nil {
 		h.logger.Errorf("error binding creating unit request data: %v", err)
-		utils.ErrorResponse(c, 400, utils.INVALID_REQUEST_DATA)
+		api.ErrorResponse(c, 400, err.Error())
 		return
 	}
 
@@ -413,11 +414,11 @@ func (h *Handler) createUnit(c *gin.Context) {
 	unit, err := h.service.CreateUnit(c, params)
 	if err != nil {
 		h.logger.Errorf("error creating a unit: %v", err)
-		utils.ErrorResponse(c, 500, utils.SERVERERROR)
+		api.ErrorResponse(c, 500, err.Error())
 		return
 	}
 
-	utils.SuccessResponse(c, 201, "unit created", UnitResponse{
+	api.SuccessResponse(c, 201, "unit created", UnitResponse{
 		Name:      unit.Name,
 		ShortCode: unit.ShortCode.String,
 		ID:        unit.ID,
@@ -477,24 +478,24 @@ func (h *Handler) CreateVariation(c *gin.Context) {
 	claims, ok := jwt.GetUserFromContext(c)
 	if !ok {
 		h.logger.Errorf("could not get user from context")
-		utils.ErrorResponse(c, 500, utils.SERVERERROR)
+		api.ErrorResponse(c, 500, api.SERVERERROR)
 		return
 	}
 
 	var req VariationRequest
 	if err := c.ShouldBind(&req); err != nil {
 		h.logger.Errorf("error binding creating business request data: %v", err)
-		utils.ErrorResponse(c, 400, utils.INVALID_REQUEST_DATA)
+		api.ErrorResponse(c, 400, err.Error())
 		return
 	}
 
 	_, err := h.service.GetItem(c, req.ItemID)
 	if err == sql.ErrNoRows {
-		utils.ErrorResponse(c, 400, fmt.Sprintf("item with id %d does not exist", req.ItemID))
+		api.ErrorResponse(c, 400, fmt.Sprintf("item with id %d does not exist", req.ItemID))
 		return
 	} else if err != nil {
 		h.logger.Errorf("error fetching item in create variation: %v", err)
-		utils.ErrorResponse(c, 500, utils.SERVERERROR)
+		api.ErrorResponse(c, 500, err.Error())
 		return
 	}
 
@@ -503,13 +504,13 @@ func (h *Handler) CreateVariation(c *gin.Context) {
 		var brand db.Brand
 		item, err := h.service.GetItem(c, req.ItemID)
 		if err != nil {
-			utils.ErrorResponse(c, 500, err.Error())
+			api.ErrorResponse(c, 500, err.Error())
 			return
 		}
 
 		category, err := h.service.GetCategory(c, item.CategoryID)
 		if err != nil {
-			utils.ErrorResponse(c, 500, err.Error())
+			api.ErrorResponse(c, 500, err.Error())
 			return
 		}
 
@@ -517,7 +518,7 @@ func (h *Handler) CreateVariation(c *gin.Context) {
 			brand, err = h.service.GetBrand(c, item.BrandID.Int32)
 			if err != nil {
 				h.logger.Errorf("error fetching brand in create variation: %v", err)
-				utils.ErrorResponse(c, 500, err.Error())
+				api.ErrorResponse(c, 500, err.Error())
 				return
 			}
 
@@ -553,13 +554,13 @@ func (h *Handler) CreateVariation(c *gin.Context) {
 		if pgErr, ok := err.(*pq.Error); ok {
 			switch pgErr.Code {
 			case "23505": // unique_violation
-				utils.ErrorResponse(c, 400, fmt.Sprintf("variant with name %s already exists", req.Name))
+				api.ErrorResponse(c, 400, fmt.Sprintf("variant with name %s already exists", req.Name))
 				return
 			}
 		}
 
 		h.logger.Errorf("error creating a variant: %v", err)
-		utils.ErrorResponse(c, 500, utils.SERVERERROR)
+		api.ErrorResponse(c, 500, err.Error())
 		return
 	}
 
@@ -573,7 +574,7 @@ func (h *Handler) CreateVariation(c *gin.Context) {
 		UserAgent:  sql.NullString{Valid: true, String: c.Request.UserAgent()},
 	})
 
-	utils.SuccessResponse(c, 201, "variant created", VariationResponse{
+	api.SuccessResponse(c, 201, "variant created", VariationResponse{
 		ID:        variant.ID,
 		ItemID:    variant.ItemID,
 		Sku:       variant.Sku,

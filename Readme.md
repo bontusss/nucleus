@@ -1,6 +1,6 @@
-# Hotel ERP API Documentation
+# Nucleus Business API Documentation
 
-This document provides comprehensive information about the Hotel ERP API, including setup, usage, and available endpoints.
+This document provides comprehensive information about the Nucleus Business API, including setup, usage, and available endpoints.
 
 ## Table of Contents
 
@@ -17,7 +17,7 @@ This document provides comprehensive information about the Hotel ERP API, includ
 
 ## Overview
 
-The Hotel ERP API is a RESTful API that provides endpoints for managing hotel operations including:
+The Nucleus Business API is a RESTful API that provides endpoints for managing hotel operations including:
 
 - Authentication and authorization
 - Point of Sale (POS) operations

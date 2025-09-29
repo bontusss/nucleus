@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Hotel ERP Deployment Script
+# Nucleus Business Deployment Script
 # Handles zero-downtime deployments with graceful restarts
 
 set -e
@@ -364,7 +364,7 @@ status() {
 
 # Show usage
 usage() {
-    echo "Hotel ERP Deployment Script"
+    echo "Nucleus Business Deployment Script"
     echo "Usage: $0 {deploy|rollback|status|install-service|start|stop|restart|health}"
     echo ""
     echo "Commands:"

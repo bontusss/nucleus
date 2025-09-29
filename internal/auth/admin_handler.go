@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	db "nucleus/db/sqlc"
-	"nucleus/internal/utils"
+	"nucleus/internal/core/api"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -78,7 +78,7 @@ func (h *AdminHandler) ResetAdminPassword(c *gin.Context) {}
 func (h *AdminHandler) CreateUser(c *gin.Context) {
 	var req CreateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, err.Error())
+		api.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 	user, err := h.service.CreateUser(c, db.CreateUserParams{
@@ -92,11 +92,11 @@ func (h *AdminHandler) CreateUser(c *gin.Context) {
 		IsActive:     sql.NullBool{Valid: true, Bool: req.IsActive},
 	})
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		api.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusCreated, "user created successfully", user)
+	api.SuccessResponse(c, http.StatusCreated, "user created successfully", user)
 }
 
 type UpdateUserRequest struct {
@@ -125,13 +125,13 @@ type UpdateUserRequest struct {
 func (h *AdminHandler) UpdateUser(c *gin.Context) {
 	userID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "invalid user id")
+		api.ErrorResponse(c, http.StatusBadRequest, "invalid user id")
 		return
 	}
 
 	var req UpdateUserRequest
 	if err = c.ShouldBindJSON(&req); err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, err.Error())
+		api.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -188,11 +188,11 @@ func (h *AdminHandler) UpdateUser(c *gin.Context) {
 
 	user, err := h.service.UpdateUser(c.Request.Context(), updateParams)
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		api.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, "User data is updated", user)
+	api.SuccessResponse(c, http.StatusOK, "User data is updated", user)
 }
 
 // DeleteUser deletes a user account
@@ -208,16 +208,16 @@ func (h *AdminHandler) UpdateUser(c *gin.Context) {
 func (h *AdminHandler) DeleteUser(c *gin.Context) {
 	userID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		utils.ErrorResponse(c, 400, err.Error())
+		api.ErrorResponse(c, 400, err.Error())
 		return
 	}
 
 	if err := h.service.DeleteUser(c.Request.Context(), int32(userID)); err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		api.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, "user is deleted", nil)
+	api.SuccessResponse(c, http.StatusOK, "user is deleted", nil)
 }
 
 type ResetPasswordRequest struct {
@@ -239,13 +239,13 @@ type ResetPasswordRequest struct {
 func (h *AdminHandler) ResetPassword(c *gin.Context) {
 	userID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		utils.ErrorResponse(c, 400, err.Error())
+		api.ErrorResponse(c, 400, err.Error())
 		return
 	}
 
 	var req ResetPasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, err.Error())
+		api.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -254,11 +254,11 @@ func (h *AdminHandler) ResetPassword(c *gin.Context) {
 		PasswordHash: req.NewPassword,
 	}
 	if err := h.service.ResetPassword(c.Request.Context(), params); err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		api.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, "password updated", nil)
+	api.SuccessResponse(c, http.StatusOK, "password updated", nil)
 }
 
 // ListUsers retrieves all users
@@ -273,10 +273,10 @@ func (h *AdminHandler) ResetPassword(c *gin.Context) {
 func (h *AdminHandler) ListUsers(c *gin.Context) {
 	users, err := h.service.queries.ListUsers(c.Request.Context())
 	if err != nil {
-		utils.ErrorResponse(c, 500, err.Error())
+		api.ErrorResponse(c, 500, err.Error())
 		return
 	}
-	utils.SuccessResponse(c, 200, "", gin.H{
+	api.SuccessResponse(c, 200, "", gin.H{
 		"data": users,
 	})
 }
@@ -296,21 +296,21 @@ func (h *AdminHandler) ListUsers(c *gin.Context) {
 func (h *AdminHandler) GetUser(c *gin.Context) {
 	userID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "invalid user id")
+		api.ErrorResponse(c, http.StatusBadRequest, "invalid user id")
 		return
 	}
 
 	user, err := h.service.queries.GetUserByID(c.Request.Context(), int32(userID))
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			utils.ErrorResponse(c, http.StatusNotFound, "user not found")
+			api.ErrorResponse(c, http.StatusNotFound, "user not found")
 			return
 		}
-		utils.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		api.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, "", gin.H{
+	api.SuccessResponse(c, http.StatusOK, "", gin.H{
 		"data": user,
 	})
 }
@@ -337,7 +337,7 @@ type CreateRoleRequest struct {
 func (h *AdminHandler) CreateRole(c *gin.Context) {
 	var req CreateRoleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, err.Error())
+		api.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -348,11 +348,11 @@ func (h *AdminHandler) CreateRole(c *gin.Context) {
 
 	role, err := h.service.CreateRole(c.Request.Context(), params)
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		api.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusCreated, "role created", gin.H{
+	api.SuccessResponse(c, http.StatusCreated, "role created", gin.H{
 		"data": role,
 	})
 }
@@ -378,13 +378,13 @@ type UpdateRoleRequest struct {
 func (h *AdminHandler) UpdateRole(c *gin.Context) {
 	roleID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "invalid role ID")
+		api.ErrorResponse(c, http.StatusBadRequest, "invalid role ID")
 		return
 	}
 
 	var req UpdateRoleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.ErrorResponse(c, 400, err.Error())
+		api.ErrorResponse(c, 400, err.Error())
 		return
 	}
 
@@ -398,11 +398,11 @@ func (h *AdminHandler) UpdateRole(c *gin.Context) {
 
 	role, err := h.service.UpdateRole(c.Request.Context(), updateParams)
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		api.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, "role updated", role)
+	api.SuccessResponse(c, http.StatusOK, "role updated", role)
 }
 
 // DeleteRole deletes a role
@@ -418,16 +418,16 @@ func (h *AdminHandler) UpdateRole(c *gin.Context) {
 func (h *AdminHandler) DeleteRole(c *gin.Context) {
 	roleID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "invalid role id")
+		api.ErrorResponse(c, http.StatusBadRequest, "invalid role id")
 		return
 	}
 
 	if err := h.service.DeleteRole(c.Request.Context(), int32(roleID)); err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		api.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusNoContent, "role deleted", nil)
+	api.SuccessResponse(c, http.StatusNoContent, "role deleted", nil)
 }
 
 // ListRoles retrieves all roles
@@ -442,11 +442,11 @@ func (h *AdminHandler) DeleteRole(c *gin.Context) {
 func (h *AdminHandler) ListRoles(c *gin.Context) {
 	roles, err := h.service.queries.ListRoles(c.Request.Context())
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		api.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, "", gin.H{"data": roles})
+	api.SuccessResponse(c, http.StatusOK, "", gin.H{"data": roles})
 }
 
 // GetRole retrieves a specific role
@@ -464,21 +464,21 @@ func (h *AdminHandler) ListRoles(c *gin.Context) {
 func (h *AdminHandler) GetRole(c *gin.Context) {
 	roleID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "invalid role id")
+		api.ErrorResponse(c, http.StatusBadRequest, "invalid role id")
 		return
 	}
 
 	role, err := h.service.queries.GetRoleByID(c.Request.Context(), int32(roleID))
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			utils.ErrorResponse(c, http.StatusNotFound, "role not found")
+			api.ErrorResponse(c, http.StatusNotFound, "role not found")
 			return
 		}
-		utils.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		api.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, "", gin.H{"data": role})
+	api.SuccessResponse(c, http.StatusOK, "", gin.H{"data": role})
 }
 
 type ManageRolePermissionRequest struct {
@@ -501,13 +501,13 @@ type ManageRolePermissionRequest struct {
 func (h *AdminHandler) AddPermissionToRole(c *gin.Context) {
 	roleID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "invalid role ID")
+		api.ErrorResponse(c, http.StatusBadRequest, "invalid role ID")
 		return
 	}
 
 	var req ManageRolePermissionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, err.Error())
+		api.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -517,11 +517,11 @@ func (h *AdminHandler) AddPermissionToRole(c *gin.Context) {
 	}
 
 	if err := h.service.AddPermissionToRole(c.Request.Context(), params); err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		api.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusNoContent, fmt.Sprintf("permission %d added to role %d", roleID, req.PermissionID), nil)
+	api.SuccessResponse(c, http.StatusNoContent, fmt.Sprintf("permission %d added to role %d", roleID, req.PermissionID), nil)
 }
 
 // RemovePermissionFromRole godoc
@@ -540,13 +540,13 @@ func (h *AdminHandler) AddPermissionToRole(c *gin.Context) {
 func (h *AdminHandler) RemovePermissionFromRole(c *gin.Context) {
 	roleID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "invalid role ID")
+		api.ErrorResponse(c, http.StatusBadRequest, "invalid role ID")
 		return
 	}
 
 	permissionID, err := strconv.Atoi(c.Param("permission_id"))
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "invalid permission ID")
+		api.ErrorResponse(c, http.StatusBadRequest, "invalid permission ID")
 		return
 	}
 
@@ -556,11 +556,11 @@ func (h *AdminHandler) RemovePermissionFromRole(c *gin.Context) {
 	}
 
 	if err := h.service.RemovePermissionFromRole(c.Request.Context(), params); err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		api.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusNoContent, fmt.Sprintf("permission %d removed from role %d", permissionID, roleID), nil)
+	api.SuccessResponse(c, http.StatusNoContent, fmt.Sprintf("permission %d removed from role %d", permissionID, roleID), nil)
 }
 
 // GetRolePermissions godoc
@@ -577,23 +577,23 @@ func (h *AdminHandler) RemovePermissionFromRole(c *gin.Context) {
 func (h *AdminHandler) GetRolePermissions(c *gin.Context) {
 	roleID, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "invalid role ID")
+		api.ErrorResponse(c, http.StatusBadRequest, "invalid role ID")
 		return
 	}
 	permissions, err := h.service.queries.GetRolePermissions(c.Request.Context(), int32(roleID))
 
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		api.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, "", permissions)
+	api.SuccessResponse(c, http.StatusOK, "", permissions)
 }
 
 // func (h *AdminHandler) GetUserActivityLogs(c *gin.Context) {
 // 	userID, err := strconv.Atoi(c.Param("id"))
 // 	if err != nil {
-// 		utils.ErrorResponse(c, http.StatusBadRequest, "invalid user ID")
+// 		api.ErrorResponse(c, http.StatusBadRequest, "invalid user ID")
 // 		return
 // 	}
 
@@ -607,11 +607,11 @@ func (h *AdminHandler) GetRolePermissions(c *gin.Context) {
 // 		Limit:  int32(limit),
 // 	})
 // 	if err != nil {
-// 		utils.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+// 		api.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 // 		return
 // 	}
 
-// 	utils.SuccessResponse(c, http.StatusOK, "", logs)
+// 	api.SuccessResponse(c, http.StatusOK, "", logs)
 // }
 
 // GetLoginHistory godoc
@@ -633,9 +633,9 @@ func (h *AdminHandler) GetLoginHistory(c *gin.Context) {
 
 	history, err := h.service.queries.GetLoginHistory(c.Request.Context(), int32(limit))
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		api.ErrorResponse(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, "", history)
+	api.SuccessResponse(c, http.StatusOK, "", history)
 }

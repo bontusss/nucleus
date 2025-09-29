@@ -30,23 +30,61 @@ import (
 
 // @title Nucleus ERP API
 // @version 1.0.0
-// @description This is the Nucleus API server. It provides endpoints for managing business operations including authentication, point of sale, inventory, and more.
-// @termsOfService http://swagger.io/terms/
-
+// @description Nucleus ERP is an open-source, API-first business suite designed for African businesses and beyond.
+// @description It provides a modern, modular, and developer-friendly platform for managing core business operations.
+// @description It also provides secure, scalable, and extensible endpoints for managing users, businesses, stores, inventory, suppliers, keys, and webhooks. Features include JWT authentication, API key support, rate limiting, activity logging, and comprehensive API documentation.
+// @description
+// @description ### Key Features
+// @description - **Authentication & Authorization**: Secure user management with JWT-based access control.
+// @description - **Business Management**: Create and manage businesses, branches, and organizational structures.
+// @description - **Point of Sale (POS)**: Process sales, payments, and receipts with support for multi-branch operations.
+// @description - **Inventory Management**: Track stock levels, suppliers, purchases, and transfers.
+// @description - **Finance & Taxation**: Manage taxes, VAT, and financial records.
+// @description - **Extensible via Webhooks & Events**: Trigger custom workflows (e.g., when a sale or inventory update occurs).
+// @description - **Audit Logging**: Automatic logging of key user and system activities for compliance.
+// @description
+// @description ### Target Users
+// @description - Small to medium businesses in Africa looking for ERP solutions tailored to their workflows.
+// @description - Developers and integrators building custom business apps on top of Nucleus API.
+// @description - Organizations needing a modular, open-source ERP that can be extended with plugins.
+// @description
+// @description ### Usage Notes
+// @description - All requests must include a valid JWT token in the `Authorization` header.
+// @description - API follows RESTful design and returns JSON responses.
+// @description - File uploads (e.g., business logos) must be sent via multipart/form-data.
+// @description
+//
+// @description  ## Authentication
+// @description  - **JWT Token:** Obtain a token by POSTing to `/api/v1/auth/login` with valid credentials. Use the returned token in the `Authorization` header as `Bearer <token>`.
+// @description  - **API Key:** Admins can generate API keys via the `/api/v1/key/generate` endpoint (requires authentication). Use the API key in the `Authorization` header as `ApiKey <key>`.
+// @description  - See [API Docs](https://github.com/bontusss/nucleus) for more details.
+// @description
+//
+// @securityDefinitions.apikey BearerAuth
+// @in            header
+// @name          Authorization
+// @description   JWT Authorization header using the Bearer scheme. Example: "Authorization: Bearer {token}"
+//
+// @securityDefinitions.apikey ApiKeyAuth
+// @in            header
+// @name          Authorization
+// @description   API Key header using the ApiKey scheme. Example: "Authorization: ApiKey {key}"
+// @termsOfService https://usenucleus.com/terms
+//
 // @contact.name Nucleus ERP API Support
+// @contact.url  https://github.com/bontusss/nucleus
 // @contact.email support@usenucleus.com
-
+//
 // @license.name MIT
 // @license.url https://opensource.org/licenses/MIT
-
+//
 // @host localhost:7000
-// @BasePath /api
-
+// @BasePath /api/v1
+//
 // @securityDefinitions.apikey BearerAuth
 // @in header
 // @name Authorization
 // @description JWT Authorization header using the Bearer scheme. Example: "Authorization: Bearer {token}"
-
 func main() {
 	start := time.Now()
 	// Load .env file
@@ -205,14 +243,15 @@ func main() {
 	}
 
 	srv := server.New(r, dbs, serverConfig)
+
 	// Health godoc
 	// @Summary Health check
 	// @Description Check the health status of the API server
-	// @Tags health
+	// @Tags Health
 	// @Produce json
 	// @Success 200 {object} map[string]string "Service is healthy"
 	// @Failure 500 {object} map[string]string "Service is unhealthy"
-	// @Router /api/v1health [get]
+	// @Router /api/v1/health [get]
 	v1.GET("/health", func(c *gin.Context) {
 		if err := srv.Health(); err != nil {
 			c.JSON(500, gin.H{"status": "unhealthy", "error": err.Error()})

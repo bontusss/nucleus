@@ -167,12 +167,12 @@ ORDER BY created_at DESC
 LIMIT $1;
 
 -- name: LogLoginAttempt :exec
-INSERT INTO login_history (username_or_email, ip_address, user_agent, success, error_reason)
+INSERT INTO login_histories (username_or_email, ip_address, user_agent, success, error_reason)
 VALUES ($1, $2, $3, $4, $5)
 RETURNING *;
 
 -- name: GetLoginHistory :many
-SELECT * FROM login_history
+SELECT * FROM login_histories
 ORDER BY login_time DESC
 LIMIT $1;
 

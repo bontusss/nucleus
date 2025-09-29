@@ -1,4 +1,3 @@
-basePath: /api
 definitions:
   auth.BadRequestResponse:
     properties:
@@ -276,87 +275,82 @@ definitions:
     - code
     - email
     type: object
-  business.BusinessResponse:
+  business.Branch:
     properties:
-      allow_overselling:
-        example: false
-        type: boolean
-      country:
-        example: Nigeria
-        type: string
-      created_at:
-        type: string
-      currency:
-        example: NGN
-        type: string
-      email:
-        example: admin@palmwinexpress.com
-        type: string
-      font:
-        type: string
-      id:
+      business_id:
+        example: 2
         type: integer
-      language:
-        example: en
-        type: string
-      logo_url:
-        example: https://imgur.com/234343
-        type: string
-      low_stock_threshold:
-        example: 5
+      id:
         type: integer
       metadata:
         additionalProperties: {}
         type: object
-      motto:
-        type: string
       name:
-        example: Palmwineexpress hotels
-        type: string
-      primary_color:
-        type: string
-      rounding:
-        example: nearest
-        type: string
-      tax_id:
-        example: "123456789"
-        type: string
-      tax_rate:
-        example: "12"
-        type: string
-      timezone:
-        example: UTC +1
-        type: string
-      updated_at:
-        type: string
-      website:
-        example: https://palmwinexpress.com
+        example: Main branch
         type: string
     required:
+    - business_id
     - name
+    type: object
+  business.BusinessResponse:
+    properties:
+      country:
+        description: Country where the business is registered
+        example: Nigeria
+        type: string
+      created_at:
+        description: Timestamp of business creation (UTC)
+        example: "2025-09-29T12:00:00Z"
+        type: string
+      email:
+        description: Business email address
+        example: admin@palmwinexpress.com
+        type: string
+      id:
+        description: Unique business ID
+        example: 1
+        type: integer
+      logo_url:
+        description: URL of the uploaded business logo
+        example: https://imgur.com/234343
+        type: string
+      metadata:
+        additionalProperties: {}
+        description: Custom metadata in JSON format
+        type: object
+      motto:
+        description: Optional business motto
+        example: Your comfort, our pride
+        type: string
+      name:
+        description: Business name
+        example: Palmwineexpress Hotels
+        type: string
+      tax_id:
+        description: Tax Identification Number
+        example: "123456789"
+        type: string
+      website:
+        description: Business website URL
+        example: https://palmwinexpress.com
+        type: string
     type: object
   business.CreateBranchRequest:
     properties:
-      addres_two:
-        example: 1 Plamwine express
-        type: string
-      address_one:
+      address:
         example: '...'
         type: string
       business_id:
         example: 2
         type: integer
-      city:
-        example: aba
-        type: string
-      country:
-        example: Nigeria
-        type: string
       email:
         example: admin.mainbranch@gmail.com
         type: string
+      is_active:
+        default: true
+        type: boolean
       metadata:
-        additionalProperties: {}
+        additionalProperties: true
         type: object
       name:
         example: Main branch
@@ -364,45 +358,27 @@ definitions:
       phone:
         example: "+2349028378964"
         type: string
-      state:
-        example: abia
-        type: string
-      website:
-        example: https://
-        type: string
-      zip_code:
-        example: '...'
-        type: string
     required:
-    - address_one
     - business_id
-    - country
     - name
     type: object
   business.CreateBranchResponse:
     properties:
-      addres_two:
-        example: 1 Plamwine express
-        type: string
-      address_one:
-        example: '...'
+      address:
+        example: 1 Palmwine express
         type: string
       business_id:
         example: 2
         type: integer
-      city:
-        example: aba
-        type: string
-      country:
-        example: Nigeria
-        type: string
       email:
-        example: ""
+        example: admin.mainbranch@gmail.com
         type: string
       id:
         type: integer
+      is_active:
+        type: boolean
       metadata:
-        additionalProperties: {}
+        additionalProperties: true
         type: object
       name:
         example: Main branch
@@ -410,41 +386,19 @@ definitions:
       phone:
         example: "+2349028378964"
         type: string
-      state:
-        example: abia
-        type: string
-      website:
-        example: https://
-        type: string
-      zip_code:
-        example: '...'
-        type: string
-    required:
-    - address_one
-    - business_id
-    - country
-    - name
     type: object
   business.ListBusinessResponse:
     properties:
-      allow_overselling:
-        type: boolean
       country:
         type: string
       created_at:
-        type: string
-      currency:
         type: string
       email:
         type: string
       id:
         type: integer
-      language:
-        type: string
       logo_url:
         type: string
-      low_stock_threshold:
-        type: integer
       metadata:
         additionalProperties: {}
         type: object
@@ -452,18 +406,19 @@ definitions:
         type: string
       name:
         type: string
-      rounding:
-        type: string
       tax_id:
-        type: string
-      tax_rate:
-        type: string
-      timezone:
         type: string
       updated_at:
         type: string
       website:
         type: string
+    type: object
+  business.OrgWithBranchResponse:
+    properties:
+      branch:
+        $ref: '#/definitions/business.Branch'
+      org:
+        $ref: '#/definitions/business.BusinessResponse'
     type: object
   business.Supplier:
     properties:
@@ -471,6 +426,8 @@ definitions:
         type: string
       business_id:
         type: integer
+      created_at:
+        type: string
       email:
         type: string
       id:
@@ -488,14 +445,8 @@ definitions:
     type: object
   business.UpdateBranchRequest:
     properties:
-      addres_two:
-        example: 1 Plamwine express
-        type: string
-      address_one:
+      address:
         example: '...'
-        type: string
-      city:
-        example: aba
         type: string
       country:
         example: Nigeria
@@ -509,36 +460,22 @@ definitions:
       phone:
         example: "+2349028378964"
         type: string
-      state:
-        example: abia
-        type: string
       website:
         example: https://
         type: string
-      zip_code:
-        example: '...'
-        type: string
     required:
-    - address_one
+    - address
     - country
     - name
     type: object
   business.UpdateBusinessRequest:
     properties:
-      allow_overselling:
-        type: boolean
       country:
-        type: string
-      currency:
         type: string
       email:
         type: string
-      language:
-        type: string
       logo_url:
         type: string
-      low_stock_threshold:
-        type: integer
       metadata:
         additionalProperties: {}
         type: object
@@ -546,35 +483,21 @@ definitions:
         type: string
       name:
         type: string
-      rounding:
-        type: string
       tax_id:
-        type: string
-      tax_rate:
-        type: string
-      timezone:
         type: string
       website:
         type: string
     type: object
   business.UpdateBusinessResponse:
     properties:
-      allow_overselling:
-        type: boolean
       country:
-        type: string
-      currency:
         type: string
       email:
         type: string
       id:
         type: integer
-      language:
-        type: string
       logo_url:
         type: string
-      low_stock_threshold:
-        type: integer
       metadata:
         additionalProperties: {}
         type: object
@@ -582,13 +505,7 @@ definitions:
         type: string
       name:
         type: string
-      rounding:
-        type: string
       tax_id:
-        type: string
-      tax_rate:
-        type: string
-      timezone:
         type: string
       website:
         type: string
@@ -977,17 +894,36 @@ definitions:
     - phone
     - store_code
     type: object
-host: localhost:7000
 info:
-  contact:
-    email: support@usenucleus.com
-    name: Nucleus ERP API Support
-  description: This is the Nucleus API server. It provides endpoints for managing
-    business operations including authentication, point of sale, inventory, and more.
-  license:
-    name: MIT
-    url: https://opensource.org/licenses/MIT
-  termsOfService: http://swagger.io/terms/
+  contact: {}
+  description: |
+    Nucleus ERP is an open-source, API-first business suite designed for African businesses and beyond.
+    It provides a modern, modular, and developer-friendly platform for managing core business operations.
+    It also provides secure, scalable, and extensible endpoints for managing users, businesses, stores, inventory, suppliers, keys, and webhooks. Features include JWT authentication, API key support, rate limiting, activity logging, and comprehensive API documentation.
+
+    ### Key Features
+    - **Authentication & Authorization**: Secure user management with JWT-based access control.
+    - **Business Management**: Create and manage businesses, branches, and organizational structures.
+    - **Point of Sale (POS)**: Process sales, payments, and receipts with support for multi-branch operations.
+    - **Inventory Management**: Track stock levels, suppliers, purchases, and transfers.
+    - **Finance & Taxation**: Manage taxes, VAT, and financial records.
+    - **Extensible via Webhooks & Events**: Trigger custom workflows (e.g., when a sale or inventory update occurs).
+    - **Audit Logging**: Automatic logging of key user and system activities for compliance.
+
+    ### Target Users
+    - Small to medium businesses in Africa looking for ERP solutions tailored to their workflows.
+    - Developers and integrators building custom business apps on top of Nucleus API.
+    - Organizations needing a modular, open-source ERP that can be extended with plugins.
+
+    ### Usage Notes
+    - All requests must include a valid JWT token in the `Authorization` header.
+    - API follows RESTful design and returns JSON responses.
+    - File uploads (e.g., business logos) must be sent via multipart/form-data.
+
+    ## Authentication
+    - **JWT Token:** Obtain a token by POSTing to `/api/v1/auth/login` with valid credentials. Use the returned token in the `Authorization` header as `Bearer <token>`.
+    - **API Key:** Admins can generate API keys via the `/api/v1/key/generate` endpoint (requires authentication). Use the API key in the `Authorization` header as `ApiKey <key>`.
+    - See [API Docs](https://github.com/bontusss/nucleus) for more details.
   title: Nucleus ERP API
   version: 1.0.0
 paths:
@@ -1725,267 +1661,6 @@ paths:
       summary: Verify Admin Email
       tags:
       - auth
-  /api/v1/business:
-    get:
-      consumes:
-      - application/json
-      description: Get a list of businesses
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/business.ListBusinessResponse'
-            type: array
-        "400":
-          description: Bad Request
-        "401":
-          description: Unauthorized
-        "403":
-          description: Forbidden
-        "500":
-          description: Internal Server Error
-      security:
-      - BearerAuth: []
-      summary: Get a list of businesses
-      tags:
-      - business
-    post:
-      consumes:
-      - multipart/form-data
-      description: Create a new business with optional logo upload.
-      parameters:
-      - description: Business name
-        in: formData
-        name: name
-        required: true
-        type: string
-      - description: Business email
-        in: formData
-        name: email
-        type: string
-      - description: Business website
-        in: formData
-        name: website
-        type: string
-      - description: Tax ID
-        in: formData
-        name: tax_id
-        type: string
-      - description: Tax Rate
-        in: formData
-        name: tax_rate
-        type: string
-      - description: Currency code (e.g. NGN)
-        in: formData
-        name: currency
-        type: string
-      - description: Timezone (e.g. UTC+1)
-        in: formData
-        name: timezone
-        type: string
-      - description: Country
-        in: formData
-        name: country
-        type: string
-      - collectionFormat: csv
-        description: Accepted payment types (e.g. cash,pos,room_charge,transfer)
-        in: formData
-        items:
-          type: string
-        name: payment_type
-        type: array
-      - description: Low stock threshold
-        in: formData
-        name: low_stock_threshold
-        type: integer
-      - description: Allow overselling
-        in: formData
-        name: allow_overselling
-        type: boolean
-      - description: Business motto
-        in: formData
-        name: motto
-        type: string
-      - description: Rounding method (e.g. nearest, up, down)
-        in: formData
-        name: rounding
-        type: string
-      - description: Language (e.g. en, fr, es)
-        in: formData
-        name: language
-        type: string
-      - description: Business logo (JPG/PNG, max 2MB)
-        in: formData
-        name: logo
-        type: file
-      - description: custom data
-        in: formData
-        name: metadata
-        type: object
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/business.BusinessResponse'
-        "400":
-          description: Bad Request
-        "401":
-          description: Unauthorized
-        "403":
-          description: Forbidden
-        "500":
-          description: Internal Server Error
-      security:
-      - BearerAuth: []
-      summary: Create a business
-      tags:
-      - business
-  /api/v1/business/:id:
-    delete:
-      consumes:
-      - application/json
-      description: Delete a new business
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: business deleted
-          schema:
-            type: string
-        "400":
-          description: Bad Request
-        "401":
-          description: Unauthorized
-        "403":
-          description: Forbidden
-        "500":
-          description: Internal Server Error
-      security:
-      - BearerAuth: []
-      summary: Delete business
-      tags:
-      - business
-    get:
-      consumes:
-      - application/json
-      description: Fetch a branch.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-        "400":
-          description: Bad Request
-        "401":
-          description: Unauthorized
-        "403":
-          description: Forbidden
-        "500":
-          description: Internal Server Error
-      security:
-      - BearerAuth: []
-      summary: fetch a branch
-      tags:
-      - business
-  /api/v1/business/branch:
-    post:
-      consumes:
-      - application/json
-      description: Delete a branch.
-      parameters:
-      - description: Branch details
-        in: body
-        name: business
-        required: true
-        schema:
-          $ref: '#/definitions/business.CreateBranchRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/business.CreateBranchResponse'
-        "400":
-          description: Bad Request
-        "401":
-          description: Unauthorized
-        "403":
-          description: Forbidden
-        "500":
-          description: Internal Server Error
-      security:
-      - BearerAuth: []
-      summary: Delete a branch
-      tags:
-      - business
-  /api/v1/business/branch/{id}:
-    put:
-      consumes:
-      - application/json
-      description: Update a branch
-      parameters:
-      - description: Branch ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Branch details
-        in: body
-        name: branch
-        required: true
-        schema:
-          $ref: '#/definitions/business.UpdateBranchRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/business.CreateBranchResponse'
-        "400":
-          description: Bad Request
-        "401":
-          description: Unauthorized
-        "403":
-          description: Forbidden
-        "500":
-          description: Internal Server Error
-      security:
-      - BearerAuth: []
-      summary: Update a branch
-      tags:
-      - business
-  /api/v1/business/supplier:
-    post:
-      consumes:
-      - application/json
-      description: Create a supplier
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/business.Supplier'
-        "400":
-          description: Bad Request
-        "401":
-          description: Unauthorized
-        "403":
-          description: Forbidden
-        "500":
-          description: Internal Server Error
-      security:
-      - BearerAuth: []
-      summary: Create a supplier
-      tags:
-      - supplier
   /api/v1/inventory/brand:
     post:
       consumes:
@@ -2118,18 +1793,206 @@ paths:
       summary: Create a variant
       tags:
       - inventory
-  /business/{id}:
-    patch:
+  /api/v1/org:
+    get:
       consumes:
       - application/json
-      description: Update a business
+      description: Retrieve all businesses owned by the authenticated user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of businesses
+          schema:
+            items:
+              $ref: '#/definitions/business.ListBusinessResponse'
+            type: array
+        "400":
+          description: Invalid request
+        "401":
+          description: 'Unauthorized: missing or invalid token'
+        "403":
+          description: 'Forbidden: you do not have access'
+        "500":
+          description: Internal server error
+      security:
+      - BearerAuth: []
+      summary: List organizations
+      tags:
+      - Organization
+    post:
+      consumes:
+      - multipart/form-data
+      description: |-
+        Create a new business/organization record and link it to the authenticated user as the owner.
+
+        ### Features
+        - Accepts required and optional business details (name, email, website, tax ID, motto, etc.).
+        - Allows uploading a business logo (JPG/PNG, max 2MB).
+        - Supports attaching custom metadata as a JSON object.
+        - Automatically sets the authenticated user as the owner of the business.
+        - Logs the creation activity for auditing purposes.
+
+        ### Notes
+        - A default branch called "Main" is created automatically when creating an org.
+        - The `metadata` field must be a valid JSON string. Example: {"industry":"Hospitality","branches":5}
+        - The `logo` field must be a JPG or PNG image not exceeding 2MB.
+        - On success, the response includes full business details, metadata, and timestamps.
+        {
+        "industry": "Hospitality",
+        "branches": 5,
+        "subscription": "premium"
+        }
+      parameters:
+      - description: Business name
+        in: formData
+        name: name
+        required: true
+        type: string
+      - description: Business email
+        in: formData
+        name: email
+        type: string
+      - description: Business website
+        in: formData
+        name: website
+        type: string
+      - description: Tax ID
+        in: formData
+        name: tax_id
+        type: string
+      - description: Motto
+        in: formData
+        name: motto
+        type: string
+      - description: Country of business
+        in: formData
+        name: country
+        required: true
+        type: string
+      - description: VAT Number
+        in: formData
+        name: vat_number
+        type: string
+      - description: Business logo (JPG/PNG, max 2MB)
+        in: formData
+        name: logo
+        type: file
+      - description: Custom metadata in JSON format
+        in: formData
+        name: metadata
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/business.OrgWithBranchResponse'
+        "400":
+          description: Bad Request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
+      summary: Create an organization
+      tags:
+      - Organization
+  /api/v1/org/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Permanently delete a business owned by the authenticated user.
       parameters:
       - description: Business ID
         in: path
         name: id
         required: true
         type: integer
-      - description: Business
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Business deleted successfully
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid business ID
+        "401":
+          description: 'Unauthorized: missing or invalid token'
+        "403":
+          description: 'Forbidden: you do not own this business'
+        "404":
+          description: Business not found
+        "500":
+          description: Internal server error
+      security:
+      - BearerAuth: []
+      summary: Delete an organization
+      tags:
+      - Organization
+    get:
+      consumes:
+      - application/json
+      description: |-
+        Retrieve details of a specific business by its ID.
+        The authenticated user must be the owner of the business.
+      parameters:
+      - description: Business ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Business retrieved successfully
+          schema:
+            type: string
+        "400":
+          description: Invalid business ID supplied
+          schema:
+            type: string
+        "401":
+          description: Unauthorized – missing or invalid JWT
+          schema:
+            type: string
+        "403":
+          description: Forbidden – user does not have access
+          schema:
+            type: string
+        "404":
+          description: Business not found
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Get an organization
+      tags:
+      - Organization
+    patch:
+      consumes:
+      - application/json
+      description: Update an existing business by ID. Only the owner of the business
+        can perform this action.
+      parameters:
+      - description: Business ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Business update payload
         in: body
         name: business
         required: true
@@ -2139,20 +2002,191 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Business successfully updated
           schema:
             $ref: '#/definitions/business.UpdateBusinessResponse'
         "400":
-          description: Bad Request
+          description: Invalid request data
+        "403":
+          description: 'Forbidden: You do not own this business'
+        "404":
+          description: Business not found
+        "500":
+          description: Internal server error
+      security:
+      - BearerAuth: []
+      summary: Update an organization
+      tags:
+      - Organization
+  /api/v1/org/branch:
+    post:
+      consumes:
+      - application/json
+      description: Create a branch. A business must have at least one branch.
+      parameters:
+      - description: Branch details
+        in: body
+        name: branch
+        required: true
+        schema:
+          $ref: '#/definitions/business.CreateBranchRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Branch created
+          schema:
+            $ref: '#/definitions/business.CreateBranchResponse'
+        "400":
+          description: Invalid input
+        "401":
+          description: Unauthorized
         "403":
           description: Forbidden
-        "404":
-          description: Not Found
         "500":
-          description: Internal Server Error
-      summary: Update a business
+          description: Internal server error
+      security:
+      - BearerAuth: []
+      summary: Create a branch
       tags:
-      - business
+      - Organization/Branch
+  /api/v1/org/branch/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: |-
+        Permanently deletes a specific branch of a business.
+        Only the business owner (or authorized user) can perform this operation.
+        Once deleted, the branch cannot be recovered.
+      parameters:
+      - description: Branch ID (the unique identifier of the branch to delete)
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Branch deleted successfully
+          schema:
+            type: string
+        "400":
+          description: Invalid branch ID supplied
+        "401":
+          description: Unauthorized - missing or invalid authentication token
+        "403":
+          description: Forbidden - user does not have permission to delete this branch
+        "404":
+          description: Branch not found
+        "500":
+          description: Internal server error
+      security:
+      - BearerAuth: []
+      summary: Delete a branch
+      tags:
+      - Organization/Branch
+    get:
+      consumes:
+      - application/json
+      description: Fetch a branch.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/business.CreateBranchResponse'
+        "400":
+          description: Invalid request data
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - BearerAuth: []
+      summary: fetch a branch
+      tags:
+      - Organization/Branch
+    patch:
+      consumes:
+      - application/json
+      description: |-
+        Updates the details of a specific branch belonging to a business.
+        Only the branch owner (business owner) can perform this operation.
+        Fields not provided in the request will remain unchanged.
+      parameters:
+      - description: Branch ID (the unique identifier of the branch to update)
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Branch details to update (only include fields you want to modify)
+        in: body
+        name: branch
+        required: true
+        schema:
+          $ref: '#/definitions/business.UpdateBranchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Branch updated successfully
+          schema:
+            $ref: '#/definitions/business.CreateBranchResponse'
+        "400":
+          description: Invalid branch ID or bad request body
+        "401":
+          description: Unauthorized - missing or invalid authentication token
+        "403":
+          description: Forbidden - user does not have permission to update this branch
+        "404":
+          description: Branch not found
+        "500":
+          description: Internal server error
+      security:
+      - BearerAuth: []
+      summary: Update an existing branch
+      tags:
+      - Organization/Branch
+  /api/v1/org/supplier:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Registers a new supplier under a specific business.
+        The business must exist and belong to the authenticated user.
+        Each supplier must have a unique name within the same business.
+      parameters:
+      - description: Supplier details (name, phone, email, address, metadata, etc.)
+        in: body
+        name: supplier
+        required: true
+        schema:
+          $ref: '#/definitions/business.Supplier'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Supplier successfully created
+          schema:
+            $ref: '#/definitions/business.Supplier'
+        "400":
+          description: Invalid request data or supplier already exists
+        "401":
+          description: Unauthorized - missing or invalid authentication token
+        "403":
+          description: Forbidden - user does not have permission to create supplier
+            for this business
+        "500":
+          description: Internal server error
+      security:
+      - BearerAuth: []
+      summary: Create a new supplier
+      tags:
+      - Organization/Supplier
   /logs:
     get:
       consumes:
@@ -2332,6 +2366,12 @@ paths:
       tags:
       - store
 securityDefinitions:
+  ApiKeyAuth:
+    description: 'API Key header using the ApiKey scheme. Example: "Authorization:
+      ApiKey {key}"'
+    in: header
+    name: Authorization
+    type: apiKey
   BearerAuth:
     description: 'JWT Authorization header using the Bearer scheme. Example: "Authorization:
       Bearer {token}"'

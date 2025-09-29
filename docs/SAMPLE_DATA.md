@@ -1,6 +1,6 @@
 # Sample Data Documentation
 
-This document describes the sample data available for the Hotel ERP system, including sample users, roles, and permissions.
+This document describes the sample data available for the Nucleus Business system, including sample users, roles, and permissions.
 
 ## Overview
 

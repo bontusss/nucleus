@@ -1,5 +1,5 @@
 -- name: CreateStore :one
-INSERT INTO store (
+INSERT INTO stores (
     name, description, branch_id, address, phone, email,
     is_active, store_code, store_type, assigned_user, manager_id, metadata
 ) VALUES (
@@ -8,19 +8,19 @@ INSERT INTO store (
 RETURNING *;
 
 -- name: GetStoreByID :one
-SELECT * FROM store WHERE id = $1 LIMIT 1;
+SELECT * FROM stores WHERE id = $1 LIMIT 1;
 
 -- name: GetStoresByBranch :many
-SELECT * FROM store WHERE branch_id = $1 ORDER BY name;
+SELECT * FROM stores WHERE branch_id = $1 ORDER BY name;
 
 -- name: GetCentralStoreByBranch :one
-SELECT * FROM store WHERE branch_id = $1 AND store_type = 'central' LIMIT 1;
+SELECT * FROM stores WHERE branch_id = $1 AND store_type = 'central' LIMIT 1;
 
 -- name: ListStores :many
-SELECT * FROM store ORDER BY created_at DESC;
+SELECT * FROM stores ORDER BY created_at DESC;
 
 -- name: UpdateStore :one
-UPDATE store
+UPDATE stores
 SET name = COALESCE(sqlc.narg(name), name),
     description = COALESCE(sqlc.narg(description), description),
     address = COALESCE(sqlc.narg(address), address),
@@ -37,16 +37,16 @@ WHERE id = $1
 RETURNING *;
 
 -- name: DeleteStore :exec
-DELETE FROM store WHERE id = $1;
+DELETE FROM stores WHERE id = $1;
 
 -- name: DeactivateStore :one
-UPDATE store
+UPDATE stores
 SET is_active = FALSE,
     updated_at = NOW()
 WHERE id = $1
 RETURNING *;
 
 -- name: SearchStoresByName :many
-SELECT * FROM store
+SELECT * FROM stores
 WHERE name ILIKE '%' || $1 || '%'
 ORDER BY name;

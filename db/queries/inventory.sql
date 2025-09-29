@@ -1,140 +1,165 @@
 -- Brand
 -- name: CreateBrand :one
-INSERT INTO brand (name, description, logo)
-VALUES ($1, $2, $3)
+INSERT INTO brands (name, description, logo, business_id)
+VALUES ($1, $2, $3, $4)
 RETURNING *;
 
 -- name: GetBrand :one
-SELECT * FROM brand WHERE id = $1 LIMIT 1;
+SELECT * FROM brands
+WHERE id = $1
+LIMIT 1;
 
--- name: ListBrands :many
-SELECT * FROM brand ORDER BY name;
+-- name: ListBrandsByBusiness :many
+SELECT * FROM brands
+WHERE business_id = $1
+ORDER BY name;
 
 -- name: UpdateBrand :one
-UPDATE brand
+UPDATE brands
 SET name = $2,
-    description = $3,
-    logo = $4,
-    is_active = $5,
+    description = COALESCE(sqlc.narg(description), description),
+    logo = COALESCE(sqlc.narg(logo), logo),
+    is_active = COALESCE(sqlc.narg(is_active), is_active),
     updated_at = NOW()
 WHERE id = $1
 RETURNING *;
 
--- name: DeleteBrand :exec
-DELETE FROM brand WHERE id = $1;
+-- name: DeleteBrand :one
+DELETE FROM brands
+WHERE id = $1
+RETURNING *;
 
 
 -- Category
 -- name: CreateCategory :one
-INSERT INTO category (name, parent_id, description)
-VALUES ($1, $2, $3)
+INSERT INTO categories (name, parent_id, description, business_id)
+VALUES ($1, $2, $3, $4)
 RETURNING *;
 
 -- name: GetCategory :one
-SELECT * FROM category WHERE id = $1 LIMIT 1;
+SELECT * FROM categories
+WHERE id = $1
+LIMIT 1;
 
--- name: ListCategories :many
-SELECT * FROM category ORDER BY name;
+-- name: ListCategoriesByBusiness :many
+SELECT * FROM categories
+WHERE business_id = $1
+ORDER BY name;
 
 -- name: UpdateCategory :one
-UPDATE category
+UPDATE categories
 SET name = $2,
-    parent_id = $3,
-    description = $4,
-    is_active = $5,
+    parent_id = COALESCE(sqlc.narg(parent_id), parent_id),
+    description = COALESCE(sqlc.narg(description), description),
+    is_active = COALESCE(sqlc.narg(is_active), is_active),
     updated_at = NOW()
 WHERE id = $1
 RETURNING *;
 
 -- name: DeleteCategory :exec
-DELETE FROM category WHERE id = $1;
+DELETE FROM categories
+WHERE id = $1
+RETURNING *;
 
 
 -- Item
 -- name: CreateItem :one
-INSERT INTO item (brand_id, category_id, name, description, no_variants, item_type)
+INSERT INTO items (brand_id, category_id, name, description, item_type, business_id)
 VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING *;
 
 -- name: UpdateItem :one
-UPDATE item
+UPDATE items
 SET brand_id = COALESCE(sqlc.narg(brand_id), brand_id),
     category_id = COALESCE(sqlc.narg(category_id), category_id),
     name = COALESCE(sqlc.narg(name), name),
     description = COALESCE(sqlc.narg(description), description),
-    no_variants = COALESCE(sqlc.narg(no_variants), no_variants),
     is_active = COALESCE(sqlc.narg(is_active), is_active),
     item_type = COALESCE(sqlc.narg(item_type), item_type),
     updated_at = NOW()
-WHERE id = $1
+WHERE id = $1 AND business_id = $2
 RETURNING *;
 
 -- name: GetItem :one
-SELECT * FROM item WHERE id = $1 LIMIT 1;
+SELECT * FROM items
+WHERE id = $1
+LIMIT 1;
 
--- name: ListItems :many
-SELECT * FROM item ORDER BY name;
+-- name: ListItemsByBusiness :many
+SELECT * FROM items
+WHERE business_id = $1
+ORDER BY name;
 
 -- name: ListItemsByCategory :many
-SELECT * FROM item WHERE category_id = $1 ORDER BY name;
+SELECT * FROM items
+WHERE category_id = $1
+ORDER BY name;
 
--- name: DeleteItem :exec
-DELETE FROM item WHERE id = $1;
+-- name: DeleteItem :one
+DELETE FROM items
+WHERE id = $1
+RETURNING *;
 
 
 -- Variation
 -- name: CreateVariation :one
-INSERT INTO variation (item_id, sku, name, unit_id, size, color_id, barcode, base_price, reorder_level, is_default)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+INSERT INTO variations (
+item_id, sku, name, unit_id, size, color_id, barcode,cost_price, base_price, reorder_level, metadata, is_active)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 RETURNING *;
 
 -- name: UpdateVariation :one
-UPDATE variation
-SET sku = $2,
-    name = $3,
-    unit_id = $4,
-    size = $5,
-    color_id = $6,
-    barcode = $7,
-    base_price = $8,
-    reorder_level = $9,
-    is_default = $10,
-    is_active = $11,
+UPDATE variations
+SET sku = COALESCE(sqlc.narg(sku), sku),
+    name = COALESCE(sqlc.narg(name), name),
+    unit_id = COALESCE(sqlc.narg(unit_id), unit_id),
+    size = COALESCE(sqlc.narg(size), size),
+    color_id = COALESCE(sqlc.narg(color_id), color_id),
+    barcode = COALESCE(sqlc.narg(barcode), barcode),
+    base_price = COALESCE(sqlc.narg(base_price), base_price),
+    reorder_level = COALESCE(sqlc.narg(reorder_level), reorder_level),
+    is_active = COALESCE(sqlc.narg(is_active), is_active),
     updated_at = NOW()
-WHERE id = $1
+WHERE id = $1 AND item_id = $2
 RETURNING *;
 
 
 -- name: GetVariation :one
-SELECT * FROM variation WHERE id = $1 LIMIT 1;
+SELECT * FROM variations
+WHERE id = $1
+LIMIT 1;
 
 -- name: ListVariationsByItem :many
-SELECT * FROM variation WHERE item_id = $1 ORDER BY name;
+SELECT * FROM variations
+WHERE item_id = $1
+ORDER BY name;
 
--- name: DeleteVariation :exec
-DELETE FROM variation WHERE id = $1;
+-- name: DeleteVariation :one
+DELETE FROM variations
+WHERE id = $1
+RETURNING *;
 
 
 -- Image
 -- name: CreateItemImage :one
-INSERT INTO item_image (item_id, variation_id, url, is_primary)
+INSERT INTO item_images (item_id, variation_id, url, is_primary)
 VALUES ($1, $2, $3, $4)
 RETURNING *;
 
 -- name: GetItemImagesByItem :many
-SELECT * FROM item_image WHERE item_id = $1;
+SELECT * FROM item_images WHERE item_id = $1;
 
 -- name: GetItemImagesByVariation :many
-SELECT * FROM item_image WHERE variation_id = $1;
+SELECT * FROM item_images WHERE variation_id = $1;
 
 -- name: DeleteItemImage :exec
-DELETE FROM item_image WHERE id = $1;
+DELETE FROM item_images WHERE id = $1;
 
 
 -- Inventory
 -- name: UpsertInventory :one
 -- name: UpsertInventory :one
-INSERT INTO inventory (store_id, variation_id, quantity)
+INSERT INTO inventories (store_id, variation_id, quantity)
 VALUES ($1, $2, $3)
 ON CONFLICT (store_id, variation_id)
 DO UPDATE SET
@@ -143,7 +168,7 @@ DO UPDATE SET
 RETURNING *;
 
 -- name: UpdateInventoryQuantity :one
-UPDATE inventory
+UPDATE inventories
 SET quantity = $3,
     last_updated = NOW()
 WHERE store_id = $1 AND variation_id = $2
@@ -151,32 +176,32 @@ RETURNING *;
 
 
 -- name: GetInventoryByStore :many
-SELECT * FROM inventory WHERE store_id = $1;
+SELECT * FROM inventories WHERE store_id = $1;
 
 -- name: GetInventoryItem :one
-SELECT * FROM inventory
+SELECT * FROM inventories
 WHERE store_id = $1 AND variation_id = $2
 LIMIT 1;
 
 -- name: DeleteInventory :exec
-DELETE FROM inventory WHERE id = $1;
+DELETE FROM inventories WHERE id = $1;
 
 -- Units
 -- name: CreateUnit :one
-INSERT INTO unit (name, short_code)
+INSERT INTO units (name, short_code)
 VALUES ($1, $2)
 RETURNING *;
 
 -- name: GetUnitByID :one
-SELECT * FROM unit
+SELECT * FROM units
 WHERE id = $1;
 
 -- name: ListUnits :many
-SELECT * FROM unit
+SELECT * FROM units
 ORDER BY id;
 
 -- name: UpdateUnit :one
-UPDATE unit
+UPDATE units
 SET name = $1,
     short_code = $2,
     updated_at = CURRENT_TIMESTAMP
@@ -184,37 +209,37 @@ WHERE id = $3
 RETURNING *;
 
 -- name: DeleteUnit :exec
-DELETE FROM unit
+DELETE FROM units
 WHERE id = $1
 RETURNING *;
 
 
 -- Color
 -- name: CreateColor :one
-INSERT INTO color (name)
+INSERT INTO colors (name)
 VALUES ($1)
 RETURNING *;
 
 -- name: GetColorByID :one
-SELECT * FROM color
+SELECT * FROM colors
 WHERE id = $1;
 
 -- name: GetColorByName :one
-SELECT * FROM color
+SELECT * FROM colors
 WHERE name = $1;
 
 -- name: ListColors :many
-SELECT * FROM color
+SELECT * FROM colors
 ORDER BY id;
 
 -- name: UpdateColor :one
-UPDATE color
+UPDATE colors
 SET name = $1,
     updated_at = CURRENT_TIMESTAMP
 WHERE id = $2
 RETURNING *;
 
 -- name: DeleteColor :exec
-DELETE FROM color
+DELETE FROM colors
 WHERE id = $1
 RETURNING *;

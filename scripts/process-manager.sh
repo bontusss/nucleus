@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Hotel ERP Process Manager
+# Nucleus Business Process Manager
 # Handles graceful shutdown, restart, and monitoring of the application
 
 set -e

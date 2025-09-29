@@ -7,6 +7,7 @@ package db
 import (
 	"database/sql"
 	"database/sql/driver"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -88,19 +89,43 @@ type Admin struct {
 	UpdatedAt             sql.NullTime   `json:"updated_at"`
 }
 
+type ApiKey struct {
+	ID                   int32        `json:"id"`
+	KeyName              string       `json:"key_name"`
+	ApiKey               string       `json:"api_key"`
+	ApiSecret            string       `json:"api_secret"`
+	UserID               int32        `json:"user_id"`
+	AllowedModules       []string     `json:"allowed_modules"`
+	MonthlyLimit         int32        `json:"monthly_limit"`
+	CurrentMonthRequests int32        `json:"current_month_requests"`
+	IsActive             bool         `json:"is_active"`
+	ExpiresAt            time.Time    `json:"expires_at"`
+	CreatedAt            sql.NullTime `json:"created_at"`
+	UpdatedAt            sql.NullTime `json:"updated_at"`
+}
+
+type ApiKeyUsage struct {
+	ID             int32        `json:"id"`
+	ApiKeyID       int32        `json:"api_key_id"`
+	ModuleName     string       `json:"module_name"`
+	Endpoint       string       `json:"endpoint"`
+	RequestMethod  string       `json:"request_method"`
+	RequestSize    int32        `json:"request_size"`
+	ResponseStatus int32        `json:"response_status"`
+	IpAddress      string       `json:"ip_address"`
+	UserAgent      string       `json:"user_agent"`
+	CreatedAt      sql.NullTime `json:"created_at"`
+}
+
 type Branch struct {
 	ID         int32                 `json:"id"`
 	BusinessID int32                 `json:"business_id"`
 	Name       string                `json:"name"`
-	AddressOne sql.NullString        `json:"address_one"`
-	AddressTwo sql.NullString        `json:"address_two"`
-	Country    sql.NullString        `json:"country"`
+	Address    sql.NullString        `json:"address"`
 	Phone      sql.NullString        `json:"phone"`
 	Email      sql.NullString        `json:"email"`
-	City       sql.NullString        `json:"city"`
-	State      sql.NullString        `json:"state"`
-	ZipCode    sql.NullString        `json:"zip_code"`
 	Metadata   pqtype.NullRawMessage `json:"metadata"`
+	IsActive   sql.NullBool          `json:"is_active"`
 	CreatedAt  sql.NullTime          `json:"created_at"`
 	UpdatedAt  sql.NullTime          `json:"updated_at"`
 }
@@ -108,6 +133,7 @@ type Branch struct {
 type Brand struct {
 	ID          int32                 `json:"id"`
 	Name        string                `json:"name"`
+	BusinessID  int32                 `json:"business_id"`
 	Description sql.NullString        `json:"description"`
 	Logo        sql.NullString        `json:"logo"`
 	IsActive    sql.NullBool          `json:"is_active"`
@@ -117,30 +143,25 @@ type Brand struct {
 }
 
 type Business struct {
-	ID                int32                 `json:"id"`
-	OwnerID           int32                 `json:"owner_id"`
-	Name              string                `json:"name"`
-	Motto             sql.NullString        `json:"motto"`
-	Email             sql.NullString        `json:"email"`
-	Website           sql.NullString        `json:"website"`
-	TaxID             sql.NullString        `json:"tax_id"`
-	TaxRate           sql.NullString        `json:"tax_rate"`
-	Country           string                `json:"country"`
-	LogoUrl           sql.NullString        `json:"logo_url"`
-	Rounding          sql.NullString        `json:"rounding"`
-	Currency          sql.NullString        `json:"currency"`
-	Timezone          sql.NullString        `json:"timezone"`
-	Language          sql.NullString        `json:"language"`
-	LowStockThreshold sql.NullInt32         `json:"low_stock_threshold"`
-	AllowOverselling  sql.NullBool          `json:"allow_overselling"`
-	Metadata          pqtype.NullRawMessage `json:"metadata"`
-	CreatedAt         sql.NullTime          `json:"created_at"`
-	UpdatedAt         sql.NullTime          `json:"updated_at"`
+	ID        int32                 `json:"id"`
+	OwnerID   int32                 `json:"owner_id"`
+	Name      string                `json:"name"`
+	Motto     sql.NullString        `json:"motto"`
+	Email     sql.NullString        `json:"email"`
+	Website   sql.NullString        `json:"website"`
+	TaxID     sql.NullString        `json:"tax_id"`
+	VatNumber sql.NullString        `json:"vat_number"`
+	Country   string                `json:"country"`
+	LogoUrl   sql.NullString        `json:"logo_url"`
+	Metadata  pqtype.NullRawMessage `json:"metadata"`
+	CreatedAt sql.NullTime          `json:"created_at"`
+	UpdatedAt sql.NullTime          `json:"updated_at"`
 }
 
 type Category struct {
 	ID          int32                 `json:"id"`
 	Name        string                `json:"name"`
+	BusinessID  int32                 `json:"business_id"`
 	ParentID    sql.NullInt32         `json:"parent_id"`
 	Description sql.NullString        `json:"description"`
 	IsActive    sql.NullBool          `json:"is_active"`
@@ -150,11 +171,12 @@ type Category struct {
 }
 
 type Color struct {
-	ID        int32                 `json:"id"`
-	Name      string                `json:"name"`
-	Metadata  pqtype.NullRawMessage `json:"metadata"`
-	CreatedAt sql.NullTime          `json:"created_at"`
-	UpdatedAt sql.NullTime          `json:"updated_at"`
+	ID         int32                 `json:"id"`
+	BusinessID int32                 `json:"business_id"`
+	Name       string                `json:"name"`
+	Metadata   pqtype.NullRawMessage `json:"metadata"`
+	CreatedAt  sql.NullTime          `json:"created_at"`
+	UpdatedAt  sql.NullTime          `json:"updated_at"`
 }
 
 type Inventory struct {
@@ -168,13 +190,13 @@ type Inventory struct {
 
 type Item struct {
 	ID          int32                 `json:"id"`
+	BusinessID  int32                 `json:"business_id"`
 	BrandID     sql.NullInt32         `json:"brand_id"`
 	CategoryID  int32                 `json:"category_id"`
 	Name        string                `json:"name"`
 	Description sql.NullString        `json:"description"`
 	ItemType    string                `json:"item_type"`
 	IsActive    sql.NullBool          `json:"is_active"`
-	NoVariants  sql.NullBool          `json:"no_variants"`
 	Metadata    pqtype.NullRawMessage `json:"metadata"`
 	CreatedAt   sql.NullTime          `json:"created_at"`
 	UpdatedAt   sql.NullTime          `json:"updated_at"`
@@ -212,6 +234,30 @@ type Permission struct {
 	ID          int32          `json:"id"`
 	Code        string         `json:"code"`
 	Description sql.NullString `json:"description"`
+}
+
+type Purchase struct {
+	ID                  int32          `json:"id"`
+	SupplierID          int32          `json:"supplier_id"`
+	BranchID            int32          `json:"branch_id"`
+	InvoiceNumber       sql.NullString `json:"invoice_number"`
+	PurchaseOrderNumber string         `json:"purchase_order_number"`
+	TotalAmount         sql.NullString `json:"total_amount"`
+	Note                sql.NullString `json:"note"`
+	Status              string         `json:"status"`
+	CreatedAt           sql.NullTime   `json:"created_at"`
+	UpdatedAt           sql.NullTime   `json:"updated_at"`
+}
+
+type PurchaseItem struct {
+	ID         int32                 `json:"id"`
+	ProductID  int32                 `json:"product_id"`
+	PurchaseID int32                 `json:"purchase_id"`
+	Quantity   int32                 `json:"quantity"`
+	UnitPrice  string                `json:"unit_price"`
+	TaxID      sql.NullInt32         `json:"tax_id"`
+	TotalPrice string                `json:"total_price"`
+	Metadata   pqtype.NullRawMessage `json:"metadata"`
 }
 
 type RefreshToken struct {
@@ -273,13 +319,36 @@ type Supplier struct {
 	UpdatedAt  sql.NullTime          `json:"updated_at"`
 }
 
+type Tax struct {
+	ID         int32                 `json:"id"`
+	BusinessID int32                 `json:"business_id"`
+	Name       string                `json:"name"`
+	Rate       string                `json:"rate"`
+	Code       string                `json:"code"`
+	IsActive   bool                  `json:"is_active"`
+	Note       sql.NullString        `json:"note"`
+	Metadata   pqtype.NullRawMessage `json:"metadata"`
+	CreatedAt  sql.NullTime          `json:"created_at"`
+	UpdatedAt  sql.NullTime          `json:"updated_at"`
+}
+
 type Unit struct {
-	ID        int32                 `json:"id"`
-	Name      string                `json:"name"`
-	ShortCode sql.NullString        `json:"short_code"`
-	Metadata  pqtype.NullRawMessage `json:"metadata"`
-	CreatedAt sql.NullTime          `json:"created_at"`
-	UpdatedAt sql.NullTime          `json:"updated_at"`
+	ID         int32                 `json:"id"`
+	BusinessID int32                 `json:"business_id"`
+	Name       string                `json:"name"`
+	ShortCode  sql.NullString        `json:"short_code"`
+	Metadata   pqtype.NullRawMessage `json:"metadata"`
+	IsActive   sql.NullBool          `json:"is_active"`
+	CreatedAt  sql.NullTime          `json:"created_at"`
+	UpdatedAt  sql.NullTime          `json:"updated_at"`
+}
+
+type UnitConversion struct {
+	ID         int32  `json:"id"`
+	BusinessID int32  `json:"business_id"`
+	FromUnitID int32  `json:"from_unit_id"`
+	ToUnitID   int32  `json:"to_unit_id"`
+	Factor     string `json:"factor"`
 }
 
 type User struct {
@@ -306,11 +375,54 @@ type Variation struct {
 	Size         sql.NullString        `json:"size"`
 	ColorID      sql.NullInt32         `json:"color_id"`
 	Barcode      sql.NullString        `json:"barcode"`
+	CostPrice    sql.NullString        `json:"cost_price"`
 	BasePrice    string                `json:"base_price"`
 	ReorderLevel sql.NullInt32         `json:"reorder_level"`
-	IsDefault    sql.NullBool          `json:"is_default"`
 	IsActive     sql.NullBool          `json:"is_active"`
 	Metadata     pqtype.NullRawMessage `json:"metadata"`
 	CreatedAt    sql.NullTime          `json:"created_at"`
 	UpdatedAt    sql.NullTime          `json:"updated_at"`
+}
+
+type VariationTax struct {
+	ID          int32 `json:"id"`
+	VariationID int32 `json:"variation_id"`
+	TaxID       int32 `json:"tax_id"`
+}
+
+type Webhook struct {
+	ID          int32          `json:"id"`
+	Name        string         `json:"name"`
+	Description sql.NullString `json:"description"`
+	Url         string         `json:"url"`
+	Secret      string         `json:"secret"`
+	Events      []string       `json:"events"`
+	UserID      int32          `json:"user_id"`
+	IsActive    sql.NullBool   `json:"is_active"`
+	RetryCount  sql.NullInt32  `json:"retry_count"`
+	MaxRetries  sql.NullInt32  `json:"max_retries"`
+	TimeoutMs   sql.NullInt32  `json:"timeout_ms"`
+	CreatedAt   sql.NullTime   `json:"created_at"`
+	UpdatedAt   sql.NullTime   `json:"updated_at"`
+}
+
+type WebhookDelivery struct {
+	ID             int32           `json:"id"`
+	WebhookID      int32           `json:"webhook_id"`
+	EventType      string          `json:"event_type"`
+	Payload        json.RawMessage `json:"payload"`
+	ResponseStatus sql.NullInt32   `json:"response_status"`
+	ResponseBody   sql.NullString  `json:"response_body"`
+	ErrorMessage   sql.NullString  `json:"error_message"`
+	AttemptNumber  sql.NullInt32   `json:"attempt_number"`
+	DeliveredAt    sql.NullTime    `json:"delivered_at"`
+	CreatedAt      sql.NullTime    `json:"created_at"`
+}
+
+type WebhookEvent struct {
+	ID          int32          `json:"id"`
+	EventType   string         `json:"event_type"`
+	Description sql.NullString `json:"description"`
+	Module      string         `json:"module"`
+	CreatedAt   sql.NullTime   `json:"created_at"`
 }
