@@ -5,13 +5,14 @@ meta {
 }
 
 get {
-  url: {{baseURI}}business
+  url: {{baseURI}}org
   body: none
-  auth: bearer
+  auth: none
 }
 
-auth:bearer {
-  token: {{token}}
+headers {
+  {{var}}: {{key}}
+  Authorization: Bearer {{token}}
 }
 
 settings {

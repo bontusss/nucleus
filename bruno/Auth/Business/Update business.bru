@@ -5,20 +5,21 @@ meta {
 }
 
 patch {
-  url: {{baseURI}}business/9
+  url: {{baseURI}}org/14
   body: json
-  auth: bearer
+  auth: none
 }
 
-auth:bearer {
-  token: {{token}}
+headers {
+  {{var}}: {{key}}
+  Authorization: Bearer {{token}}
 }
 
 body:json {
   {
     "website": "test.example.com",
     "metadata": {
-      "founded": "1234"
+      "name": "addrexxxxx"
     }
   }
 }

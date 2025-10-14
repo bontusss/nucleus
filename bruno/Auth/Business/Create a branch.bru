@@ -5,20 +5,21 @@ meta {
 }
 
 post {
-  url: {{baseURI}}business/branch
+  url: {{baseURI}}org/branch
   body: json
-  auth: bearer
+  auth: none
 }
 
-auth:bearer {
-  token: {{token}}
+headers {
+  {{var}}: {{key}}
+  Authorization: Bearer {{token}}
 }
 
 body:json {
   {
     "name": "Main22 branch",
     "country": "Nigeria",
-    "business_id": 3,
+    "business_id": 14,
     "address": "23 Haba road",
     "metadata": {"industry":"hospitality","tier":"gold","founded":2024}
   }

@@ -16,7 +16,7 @@ type Querier interface {
 	ListStores(ctx context.Context) ([]db.Store, error)
 	UpdateStore(ctx context.Context, params db.UpdateStoreParams) (db.Store, error)
 	SearchStoresByName(ctx context.Context, name sql.NullString) ([]db.Store, error)
-	LogActivity(ctx context.Context, params db.LogActivityParams) (db.ActivityLog, error)
+	CreateActivityLog(ctx context.Context, params db.CreateActivityLogParams) (db.ActivityLog, error)
 }
 
 type StoreInterface interface {
@@ -24,5 +24,5 @@ type StoreInterface interface {
 	DeleteStore(ctx context.Context, id int32) error
 	GetStoreByID(ctx context.Context, id int32) (db.Store, error)
 	UpdateStore(ctx context.Context, params db.UpdateStoreParams) (db.Store, error)
-	LogActivity(ctx context.Context, params db.LogActivityParams) (db.ActivityLog, error)
+	LogActivity(ctx context.Context, params db.CreateActivityLogParams) (db.ActivityLog, error)
 }

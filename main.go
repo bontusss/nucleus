@@ -11,10 +11,13 @@ import (
 	logs "nucleus/internal/core/ilogs"
 	"nucleus/internal/core/inventory"
 	"nucleus/internal/core/store"
+	"nucleus/internal/core/user"
 	"nucleus/internal/docs"
+	"nucleus/internal/key"
 	"nucleus/internal/middleware"
 	"nucleus/internal/pos"
 	"nucleus/internal/server"
+	"nucleus/internal/webhook"
 	"nucleus/pkg/database"
 	"nucleus/pkg/monitoring/logging"
 	"nucleus/pkg/ratelimit"
@@ -67,8 +70,8 @@ import (
 //
 // @securityDefinitions.apikey ApiKeyAuth
 // @in            header
-// @name          Authorization
-// @description   API Key header using the ApiKey scheme. Example: "Authorization: ApiKey {key}"
+// @name          X-API-Key
+// @description   API Key header using the ApiKey scheme. Example: "X-API-Key": ApiKey, "Value": {key}"
 // @termsOfService https://usenucleus.com/terms
 //
 // @contact.name Nucleus ERP API Support
@@ -85,6 +88,11 @@ import (
 // @in header
 // @name Authorization
 // @description JWT Authorization header using the Bearer scheme. Example: "Authorization: Bearer {token}"
+// 
+// @tag.name Organization
+// @tag.description lorem ipsum
+
+
 func main() {
 	start := time.Now()
 	// Load .env file
@@ -194,27 +202,41 @@ func main() {
 	logger := logging.NewLogger(cfg)
 
 	// public routes
-	authHandler := auth.NewHandler(authSvc, cfg, logger, cfg.GinMode)
-	v1.POST("/auth/login", authHandler.Login)
-	v1.POST("/auth/register", authHandler.RegisterAdmin)
-	v1.POST("/auth/verify-email", authHandler.VerifyEmail)
-	v1.POST("/auth/forgot-password", authHandler.ForgotPassword)
-	v1.POST("/auth/reset-password", authHandler.ResetPassword)
+	authHandler := auth.NewHandler(authSvc, cfg, logger)
+	v1.POST("/tenant/login", authHandler.Login)
+	v1.POST("/tenant/register", authHandler.RegisterTenant)
+	v1.POST("/tenant/verify-email", authHandler.VerifyEmail)
+	v1.POST("/tenant/forgot-password", authHandler.ForgotPassword)
+	v1.POST("/tenant/reset-password", authHandler.ResetPassword)
 
 	// secured routes (JWT required)
 	secured := v1.Group("")
 	secured.Use(auth.AuthMiiddleware(authSvc))
 	secured.POST("/auth/logout", authHandler.Logout)
-	secured.POST("/auth/refresh", authHandler.Refresh)
+	// secured.POST("/auth/refresh", authHandler.Refresh)
 
-	// Admin auth routes
-	adminHandler := auth.NewAdminHandler(authSvc)
-	adminHandler.RegisterAdminRoutes(secured, authSvc)
+	// API Key
+	apiKeyService := key.NewService(queries)
+	keyHandler := key.NewHandler(apiKeyService, logger, cfg)
+	keyHandler.RegisterRoutes(secured, authSvc)
+
+	apiKeyProtected := v1.Group("")
+
+
+	// User management with RBAC
+	userService := user.NewService(dbs, queries)
+	userHandler := user.NewHandler(userService, logger, cfg)
+	userHandler.RegisterRoutes(apiKeyProtected, authSvc, apiKeyService)
+
+	// webhooks
+	webhookService := webhook.NewService(queries)
+	webhookHandler := webhook.NewHandler(webhookService)
+	webhookHandler.RegisterRoutes(apiKeyProtected, apiKeyService)
 
 	// Core business setup
 	businessService := business.NewBusiness(queries, dbs)
-	coreHandler := business.NewBusinessHandler(businessService, cfg, logger)
-	coreHandler.RegisterRoutes(secured, authSvc)
+	coreHandler := business.NewBusinessHandler(businessService, cfg, logger, userService, webhookService)
+	coreHandler.RegisterRoutes(apiKeyProtected, authSvc, apiKeyService)
 
 	// Logs routes
 	logService := logs.NewLogs(dbs, queries)
@@ -224,12 +246,12 @@ func main() {
 	// Store routes
 	storeService := store.NewStore(dbs, queries)
 	storeHandler := store.NewHandler(storeService, logger)
-	storeHandler.RegisterRoutes(secured, authSvc)
+	storeHandler.RegisterRoutes(apiKeyProtected, authSvc)
 
 	// Inventory
 	inventoryService := inventory.NewInventory(queries, dbs)
 	inventoryHandler := inventory.NewInventoryHandler(inventoryService, logger)
-	inventoryHandler.RegisterRoutes(secured, authSvc)
+	inventoryHandler.RegisterRoutes(apiKeyProtected, authSvc)
 
 	// POS routes
 	pos.RegisterRoutes(secured, authSvc)

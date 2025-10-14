@@ -1,0 +1,29 @@
+meta {
+  name: User Login
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseURI}}tenant/login
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "email": "user1@gmail.com",
+    "password": "password",
+    "tenant_id": 1
+  }
+}
+
+tests {
+  const body = res.body;
+  bru.setEnvVar("token", body.data.token);
+  
+}
+
+settings {
+  encodeUrl: true
+}

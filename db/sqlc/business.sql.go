@@ -27,7 +27,7 @@ type CreateBranchParams struct {
 	Phone      sql.NullString        `json:"phone"`
 	Email      sql.NullString        `json:"email"`
 	Metadata   pqtype.NullRawMessage `json:"metadata"`
-	IsActive   sql.NullBool          `json:"is_active"`
+	IsActive   bool                  `json:"is_active"`
 }
 
 func (q *Queries) CreateBranch(ctx context.Context, arg CreateBranchParams) (Branch, error) {
@@ -58,16 +58,16 @@ func (q *Queries) CreateBranch(ctx context.Context, arg CreateBranchParams) (Bra
 
 const createBusiness = `-- name: CreateBusiness :one
 INSERT INTO businesses (
-    owner_id, name, motto, email, website, tax_id, vat_number,
+    tenants_id, name, motto, email, website, tax_id, vat_number,
     country, logo_url, metadata
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7,
     $8, $9, $10
-) RETURNING id, owner_id, name, motto, email, website, tax_id, vat_number, country, logo_url, metadata, created_at, updated_at
+) RETURNING id, tenants_id, name, motto, email, website, tax_id, vat_number, country, logo_url, is_active, metadata, created_at, updated_at
 `
 
 type CreateBusinessParams struct {
-	OwnerID   int32                 `json:"owner_id"`
+	TenantsID int32                 `json:"tenants_id"`
 	Name      string                `json:"name"`
 	Motto     sql.NullString        `json:"motto"`
 	Email     sql.NullString        `json:"email"`
@@ -81,7 +81,7 @@ type CreateBusinessParams struct {
 
 func (q *Queries) CreateBusiness(ctx context.Context, arg CreateBusinessParams) (Business, error) {
 	row := q.db.QueryRowContext(ctx, createBusiness,
-		arg.OwnerID,
+		arg.TenantsID,
 		arg.Name,
 		arg.Motto,
 		arg.Email,
@@ -95,7 +95,7 @@ func (q *Queries) CreateBusiness(ctx context.Context, arg CreateBusinessParams) 
 	var i Business
 	err := row.Scan(
 		&i.ID,
-		&i.OwnerID,
+		&i.TenantsID,
 		&i.Name,
 		&i.Motto,
 		&i.Email,
@@ -104,6 +104,7 @@ func (q *Queries) CreateBusiness(ctx context.Context, arg CreateBusinessParams) 
 		&i.VatNumber,
 		&i.Country,
 		&i.LogoUrl,
+		&i.IsActive,
 		&i.Metadata,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -137,21 +138,21 @@ func (q *Queries) DeleteBranch(ctx context.Context, id int32) (Branch, error) {
 
 const deleteBusiness = `-- name: DeleteBusiness :one
 DELETE FROM businesses
-WHERE id = $1 AND owner_id = $2
-RETURNING id, owner_id, name, motto, email, website, tax_id, vat_number, country, logo_url, metadata, created_at, updated_at
+WHERE id = $1 AND tenants_id = $2
+RETURNING id, tenants_id, name, motto, email, website, tax_id, vat_number, country, logo_url, is_active, metadata, created_at, updated_at
 `
 
 type DeleteBusinessParams struct {
-	ID      int32 `json:"id"`
-	OwnerID int32 `json:"owner_id"`
+	ID        int32 `json:"id"`
+	TenantsID int32 `json:"tenants_id"`
 }
 
 func (q *Queries) DeleteBusiness(ctx context.Context, arg DeleteBusinessParams) (Business, error) {
-	row := q.db.QueryRowContext(ctx, deleteBusiness, arg.ID, arg.OwnerID)
+	row := q.db.QueryRowContext(ctx, deleteBusiness, arg.ID, arg.TenantsID)
 	var i Business
 	err := row.Scan(
 		&i.ID,
-		&i.OwnerID,
+		&i.TenantsID,
 		&i.Name,
 		&i.Motto,
 		&i.Email,
@@ -160,6 +161,7 @@ func (q *Queries) DeleteBusiness(ctx context.Context, arg DeleteBusinessParams) 
 		&i.VatNumber,
 		&i.Country,
 		&i.LogoUrl,
+		&i.IsActive,
 		&i.Metadata,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -179,11 +181,16 @@ func (q *Queries) DeleteTax(ctx context.Context, id int32) error {
 
 const getBranch = `-- name: GetBranch :one
 SELECT id, business_id, name, address, phone, email, metadata, is_active, created_at, updated_at FROM branches
-WHERE id = $1
+WHERE id = $1 AND business_id = $2
 `
 
-func (q *Queries) GetBranch(ctx context.Context, id int32) (Branch, error) {
-	row := q.db.QueryRowContext(ctx, getBranch, id)
+type GetBranchParams struct {
+	ID         int32 `json:"id"`
+	BusinessID int32 `json:"business_id"`
+}
+
+func (q *Queries) GetBranch(ctx context.Context, arg GetBranchParams) (Branch, error) {
+	row := q.db.QueryRowContext(ctx, getBranch, arg.ID, arg.BusinessID)
 	var i Branch
 	err := row.Scan(
 		&i.ID,
@@ -201,22 +208,22 @@ func (q *Queries) GetBranch(ctx context.Context, id int32) (Branch, error) {
 }
 
 const getBusiness = `-- name: GetBusiness :one
-SELECT id, owner_id, name, motto, email, website, tax_id, vat_number, country, logo_url, metadata, created_at, updated_at
+SELECT id, tenants_id, name, motto, email, website, tax_id, vat_number, country, logo_url, is_active, metadata, created_at, updated_at
 FROM businesses
-WHERE id = $1 AND owner_id = $2
+WHERE id = $1 AND tenants_id = $2
 `
 
 type GetBusinessParams struct {
-	ID      int32 `json:"id"`
-	OwnerID int32 `json:"owner_id"`
+	ID        int32 `json:"id"`
+	TenantsID int32 `json:"tenants_id"`
 }
 
 func (q *Queries) GetBusiness(ctx context.Context, arg GetBusinessParams) (Business, error) {
-	row := q.db.QueryRowContext(ctx, getBusiness, arg.ID, arg.OwnerID)
+	row := q.db.QueryRowContext(ctx, getBusiness, arg.ID, arg.TenantsID)
 	var i Business
 	err := row.Scan(
 		&i.ID,
-		&i.OwnerID,
+		&i.TenantsID,
 		&i.Name,
 		&i.Motto,
 		&i.Email,
@@ -225,6 +232,7 @@ func (q *Queries) GetBusiness(ctx context.Context, arg GetBusinessParams) (Busin
 		&i.VatNumber,
 		&i.Country,
 		&i.LogoUrl,
+		&i.IsActive,
 		&i.Metadata,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -296,14 +304,14 @@ func (q *Queries) ListBranches(ctx context.Context, businessID int32) ([]Branch,
 }
 
 const listBusinesses = `-- name: ListBusinesses :many
-SELECT id, owner_id, name, motto, email, website, tax_id, vat_number, country, logo_url, metadata, created_at, updated_at
+SELECT id, tenants_id, name, motto, email, website, tax_id, vat_number, country, logo_url, is_active, metadata, created_at, updated_at
 FROM businesses
-WHERE owner_id = $1
+WHERE tenants_id = $1
 ORDER BY created_at
 `
 
-func (q *Queries) ListBusinesses(ctx context.Context, ownerID int32) ([]Business, error) {
-	rows, err := q.db.QueryContext(ctx, listBusinesses, ownerID)
+func (q *Queries) ListBusinesses(ctx context.Context, tenantsID int32) ([]Business, error) {
+	rows, err := q.db.QueryContext(ctx, listBusinesses, tenantsID)
 	if err != nil {
 		return nil, err
 	}
@@ -313,7 +321,7 @@ func (q *Queries) ListBusinesses(ctx context.Context, ownerID int32) ([]Business
 		var i Business
 		if err := rows.Scan(
 			&i.ID,
-			&i.OwnerID,
+			&i.TenantsID,
 			&i.Name,
 			&i.Motto,
 			&i.Email,
@@ -322,6 +330,7 @@ func (q *Queries) ListBusinesses(ctx context.Context, ownerID int32) ([]Business
 			&i.VatNumber,
 			&i.Country,
 			&i.LogoUrl,
+			&i.IsActive,
 			&i.Metadata,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -440,8 +449,8 @@ UPDATE businesses SET
     country = COALESCE($8, country),
     metadata = COALESCE($9, metadata),
     updated_at = CURRENT_TIMESTAMP
-WHERE id = $10 AND owner_id = $11
-RETURNING id, owner_id, name, motto, email, website, tax_id, vat_number, country, logo_url, metadata, created_at, updated_at
+WHERE id = $10 AND tenants_id = $11
+RETURNING id, tenants_id, name, motto, email, website, tax_id, vat_number, country, logo_url, is_active, metadata, created_at, updated_at
 `
 
 type UpdateBusinessParams struct {
@@ -455,7 +464,7 @@ type UpdateBusinessParams struct {
 	Country   sql.NullString        `json:"country"`
 	Metadata  pqtype.NullRawMessage `json:"metadata"`
 	ID        int32                 `json:"id"`
-	OwnerID   int32                 `json:"owner_id"`
+	TenantsID int32                 `json:"tenants_id"`
 }
 
 func (q *Queries) UpdateBusiness(ctx context.Context, arg UpdateBusinessParams) (Business, error) {
@@ -470,12 +479,12 @@ func (q *Queries) UpdateBusiness(ctx context.Context, arg UpdateBusinessParams) 
 		arg.Country,
 		arg.Metadata,
 		arg.ID,
-		arg.OwnerID,
+		arg.TenantsID,
 	)
 	var i Business
 	err := row.Scan(
 		&i.ID,
-		&i.OwnerID,
+		&i.TenantsID,
 		&i.Name,
 		&i.Motto,
 		&i.Email,
@@ -484,6 +493,7 @@ func (q *Queries) UpdateBusiness(ctx context.Context, arg UpdateBusinessParams) 
 		&i.VatNumber,
 		&i.Country,
 		&i.LogoUrl,
+		&i.IsActive,
 		&i.Metadata,
 		&i.CreatedAt,
 		&i.UpdatedAt,

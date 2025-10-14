@@ -1,0 +1,27 @@
+meta {
+  name: Grant permission to role
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseURI}}roles/1/permissions
+  body: json
+  auth: apikey
+}
+
+auth:apikey {
+  key: {{var}}
+  value: {{key}}
+  placement: header
+}
+
+body:json {
+  {
+    "permission_id": 15
+  }
+}
+
+settings {
+  encodeUrl: true
+}

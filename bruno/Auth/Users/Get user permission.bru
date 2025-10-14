@@ -1,0 +1,21 @@
+meta {
+  name: Get user permission
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseURI}}users/1/permissions
+  body: none
+  auth: apikey
+}
+
+auth:apikey {
+  key: {{var}}
+  value: {{key}}
+  placement: header
+}
+
+settings {
+  encodeUrl: true
+}

@@ -81,3 +81,7 @@ func PermissionMiddleware(authSvc *Service, permission string) gin.HandlerFunc {
 func AdminMiddleware(authSvc *Service) gin.HandlerFunc {
 	return PermissionMiddleware(authSvc, "admin:manage")
 }
+
+func DeveloperMiddleware(authSvc *Service) gin.HandlerFunc {
+	return PermissionMiddleware(authSvc, "tenant:manage")
+}

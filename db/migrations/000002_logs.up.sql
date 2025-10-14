@@ -1,6 +1,7 @@
 -- User activity logs
 CREATE TABLE activity_logs (
     id SERIAL PRIMARY KEY,
+    business_id INTEGER NOT NULL REFERENCES businesses(id),
     user_id INTEGER NOT NULL,
     action VARCHAR(50) NOT NULL,
     details VARCHAR NOT NULL,
@@ -11,6 +12,9 @@ CREATE TABLE activity_logs (
     metadata JSONB DEFAULT '{}',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX idx_activity_logs_business_id_created_at
+    ON activity_logs(business_id, created_at DESC);
 
 -- Login history
 CREATE TABLE login_histories (
@@ -26,9 +30,9 @@ CREATE TABLE login_histories (
 -- Password reset tokens
 CREATE TABLE password_reset_tokens (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL,
+    developer_id INTEGER NOT NULL,
     token VARCHAR(255) UNIQUE NOT NULL,
     expires_at TIMESTAMP NOT NULL,
     used BOOLEAN DEFAULT FALSE,
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    FOREIGN KEY (developer_id) REFERENCES tenants(id)
 );

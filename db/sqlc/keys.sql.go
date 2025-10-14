@@ -14,16 +14,16 @@ import (
 )
 
 const createAPIKey = `-- name: CreateAPIKey :one
-INSERT INTO api_keys (key_name, api_key, api_secret, user_id, allowed_modules, monthly_limit, expires_at)
+INSERT INTO api_keys (key_name, api_key, api_secret, tenant_id, allowed_modules, monthly_limit, expires_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, key_name, api_key, api_secret, user_id, allowed_modules, monthly_limit, current_month_requests, is_active, expires_at, created_at, updated_at
+RETURNING id, key_name, api_key, api_secret, tenant_id, allowed_modules, monthly_limit, current_month_requests, is_active, expires_at, created_at, updated_at
 `
 
 type CreateAPIKeyParams struct {
 	KeyName        string    `json:"key_name"`
 	ApiKey         string    `json:"api_key"`
 	ApiSecret      string    `json:"api_secret"`
-	UserID         int32     `json:"user_id"`
+	TenantID       int32     `json:"tenant_id"`
 	AllowedModules []string  `json:"allowed_modules"`
 	MonthlyLimit   int32     `json:"monthly_limit"`
 	ExpiresAt      time.Time `json:"expires_at"`
@@ -34,7 +34,7 @@ func (q *Queries) CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) (Api
 		arg.KeyName,
 		arg.ApiKey,
 		arg.ApiSecret,
-		arg.UserID,
+		arg.TenantID,
 		pq.Array(arg.AllowedModules),
 		arg.MonthlyLimit,
 		arg.ExpiresAt,
@@ -45,7 +45,7 @@ func (q *Queries) CreateAPIKey(ctx context.Context, arg CreateAPIKeyParams) (Api
 		&i.KeyName,
 		&i.ApiKey,
 		&i.ApiSecret,
-		&i.UserID,
+		&i.TenantID,
 		pq.Array(&i.AllowedModules),
 		&i.MonthlyLimit,
 		&i.CurrentMonthRequests,
@@ -67,7 +67,7 @@ func (q *Queries) DeleteAPIKey(ctx context.Context, id int32) error {
 }
 
 const getAPIKeyByID = `-- name: GetAPIKeyByID :one
-SELECT id, key_name, api_key, api_secret, user_id, allowed_modules, monthly_limit, current_month_requests, is_active, expires_at, created_at, updated_at FROM api_keys WHERE id = $1
+SELECT id, key_name, api_key, api_secret, tenant_id, allowed_modules, monthly_limit, current_month_requests, is_active, expires_at, created_at, updated_at FROM api_keys WHERE id = $1
 `
 
 func (q *Queries) GetAPIKeyByID(ctx context.Context, id int32) (ApiKey, error) {
@@ -78,7 +78,7 @@ func (q *Queries) GetAPIKeyByID(ctx context.Context, id int32) (ApiKey, error) {
 		&i.KeyName,
 		&i.ApiKey,
 		&i.ApiSecret,
-		&i.UserID,
+		&i.TenantID,
 		pq.Array(&i.AllowedModules),
 		&i.MonthlyLimit,
 		&i.CurrentMonthRequests,
@@ -91,7 +91,7 @@ func (q *Queries) GetAPIKeyByID(ctx context.Context, id int32) (ApiKey, error) {
 }
 
 const getAPIKeyByKey = `-- name: GetAPIKeyByKey :one
-SELECT id, key_name, api_key, api_secret, user_id, allowed_modules, monthly_limit, current_month_requests, is_active, expires_at, created_at, updated_at FROM api_keys WHERE api_key = $1
+SELECT id, key_name, api_key, api_secret, tenant_id, allowed_modules, monthly_limit, current_month_requests, is_active, expires_at, created_at, updated_at FROM api_keys WHERE api_key = $1
 `
 
 func (q *Queries) GetAPIKeyByKey(ctx context.Context, apiKey string) (ApiKey, error) {
@@ -102,7 +102,7 @@ func (q *Queries) GetAPIKeyByKey(ctx context.Context, apiKey string) (ApiKey, er
 		&i.KeyName,
 		&i.ApiKey,
 		&i.ApiSecret,
-		&i.UserID,
+		&i.TenantID,
 		pq.Array(&i.AllowedModules),
 		&i.MonthlyLimit,
 		&i.CurrentMonthRequests,
@@ -188,12 +188,12 @@ func (q *Queries) GetAPIKeyUsageStats(ctx context.Context, arg GetAPIKeyUsageSta
 	return i, err
 }
 
-const getAPIKeysByUser = `-- name: GetAPIKeysByUser :many
-SELECT id, key_name, api_key, api_secret, user_id, allowed_modules, monthly_limit, current_month_requests, is_active, expires_at, created_at, updated_at FROM api_keys WHERE user_id = $1 ORDER BY created_at DESC
+const getAPIKeysByTenant = `-- name: GetAPIKeysByTenant :many
+SELECT id, key_name, api_key, api_secret, tenant_id, allowed_modules, monthly_limit, current_month_requests, is_active, expires_at, created_at, updated_at FROM api_keys WHERE tenant_id = $1 ORDER BY created_at DESC
 `
 
-func (q *Queries) GetAPIKeysByUser(ctx context.Context, userID int32) ([]ApiKey, error) {
-	rows, err := q.db.QueryContext(ctx, getAPIKeysByUser, userID)
+func (q *Queries) GetAPIKeysByTenant(ctx context.Context, tenantID int32) ([]ApiKey, error) {
+	rows, err := q.db.QueryContext(ctx, getAPIKeysByTenant, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -206,7 +206,7 @@ func (q *Queries) GetAPIKeysByUser(ctx context.Context, userID int32) ([]ApiKey,
 			&i.KeyName,
 			&i.ApiKey,
 			&i.ApiSecret,
-			&i.UserID,
+			&i.TenantID,
 			pq.Array(&i.AllowedModules),
 			&i.MonthlyLimit,
 			&i.CurrentMonthRequests,
@@ -298,7 +298,7 @@ const updateAPIKey = `-- name: UpdateAPIKey :one
 UPDATE api_keys
 SET key_name = $2, allowed_modules = $3, monthly_limit = $4, expires_at = $5, is_active = $6, updated_at = CURRENT_TIMESTAMP
 WHERE id = $1
-RETURNING id, key_name, api_key, api_secret, user_id, allowed_modules, monthly_limit, current_month_requests, is_active, expires_at, created_at, updated_at
+RETURNING id, key_name, api_key, api_secret, tenant_id, allowed_modules, monthly_limit, current_month_requests, is_active, expires_at, created_at, updated_at
 `
 
 type UpdateAPIKeyParams struct {
@@ -325,7 +325,7 @@ func (q *Queries) UpdateAPIKey(ctx context.Context, arg UpdateAPIKeyParams) (Api
 		&i.KeyName,
 		&i.ApiKey,
 		&i.ApiSecret,
-		&i.UserID,
+		&i.TenantID,
 		pq.Array(&i.AllowedModules),
 		&i.MonthlyLimit,
 		&i.CurrentMonthRequests,

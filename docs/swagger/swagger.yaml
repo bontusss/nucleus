@@ -6,50 +6,6 @@ definitions:
         example: Bad request
         type: string
     type: object
-  auth.CreateRoleRequest:
-    properties:
-      description:
-        type: string
-      name:
-        type: string
-    required:
-    - name
-    type: object
-  auth.CreateUserRequest:
-    properties:
-      email:
-        type: string
-      first_name:
-        minLength: 2
-        type: string
-      gender:
-        enum:
-        - male
-        - female
-        type: string
-      is_active:
-        type: boolean
-      last_name:
-        minLength: 2
-        type: string
-      password:
-        minLength: 4
-        type: string
-      role_id:
-        type: integer
-      username:
-        minLength: 3
-        type: string
-    required:
-    - email
-    - first_name
-    - gender
-    - is_active
-    - last_name
-    - password
-    - role_id
-    - username
-    type: object
   auth.ForgotPasswordRequest:
     properties:
       email:
@@ -77,11 +33,11 @@ definitions:
         description: Password for authentication
         example: password123
         type: string
-      username:
-        description: Username for authentication (optional if email provided)
-        example: admin
-        type: string
+      tenant_id:
+        example: 1
+        type: integer
     required:
+    - email
     - password
     type: object
   auth.LoginResponse:
@@ -100,62 +56,6 @@ definitions:
         example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         type: string
     type: object
-  auth.ManageRolePermissionRequest:
-    properties:
-      permission_id:
-        example: 1
-        type: integer
-    required:
-    - permission_id
-    type: object
-  auth.RefreshRequest:
-    properties:
-      refreshToken:
-        description: JWT refresh token
-        example: dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4...
-        type: string
-    required:
-    - refreshToken
-    type: object
-  auth.RefreshResponse:
-    properties:
-      accessToken:
-        description: JWT authentication token
-        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-        type: string
-      expiresIn:
-        description: Token expiration in seconds
-        example: 3600
-        type: integer
-      refreshToken:
-        description: JWT refresh token
-        example: dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4...
-        type: string
-    type: object
-  auth.RegisterAdminRequest:
-    description: Register admin request payload
-    properties:
-      email:
-        type: string
-      first_name:
-        minLength: 2
-        type: string
-      last_name:
-        minLength: 2
-        type: string
-      password:
-        minLength: 8
-        type: string
-      username:
-        minLength: 3
-        type: string
-    required:
-    - email
-    - first_name
-    - last_name
-    - password
-    - username
-    type: object
   auth.RegisterResponse:
     properties:
       created_at:
@@ -163,9 +63,6 @@ definitions:
         type: string
       email:
         example: admin@hotel.com
-        type: string
-      first_name:
-        example: Admin
         type: string
       id:
         example: 1
@@ -176,18 +73,28 @@ definitions:
       is_email_verified:
         example: true
         type: boolean
-      last_name:
-        example: Admin
+      organization:
+        example: org name
         type: string
-      role_id:
-        example: 1
-        type: integer
       updated_at:
         example: "2021-01-01T00:00:00Z"
         type: string
-      username:
-        example: admin
+    type: object
+  auth.RegisterTenantRequest:
+    description: Register admin request payload
+    properties:
+      email:
         type: string
+      organization:
+        minLength: 2
+        type: string
+      password:
+        minLength: 8
+        type: string
+    required:
+    - email
+    - organization
+    - password
     type: object
   auth.ResetAdminPasswordRequest:
     properties:
@@ -208,60 +115,11 @@ definitions:
     - email
     - new_password
     type: object
-  auth.ResetPasswordRequest:
-    properties:
-      new_password:
-        minLength: 8
-        type: string
-    required:
-    - new_password
-    type: object
   auth.UnauthorizedResponse:
     properties:
       error:
         description: Error message
         example: Unauthorized
-        type: string
-    type: object
-  auth.UpdateRoleRequest:
-    properties:
-      description:
-        example: Manages daily operations
-        type: string
-      name:
-        example: Manager
-        type: string
-    required:
-    - name
-    type: object
-  auth.UpdateUserRequest:
-    properties:
-      email:
-        example: johndoe@email.com
-        type: string
-      first_name:
-        example: John
-        minLength: 2
-        type: string
-      gender:
-        enum:
-        - male
-        - female
-        example: male
-        type: string
-      is_active:
-        example: true
-        type: boolean
-      last_name:
-        example: Doe
-        minLength: 2
-        type: string
-      role_id:
-        example: 2
-        type: integer
-      username:
-        example: johndoe
-        minLength: 3
         type: string
     type: object
   auth.VerifyEmailRequest:
@@ -641,27 +499,6 @@ definitions:
       unit_id:
         type: integer
     type: object
-  logs.LogsResponse:
-    properties:
-      action:
-        type: string
-      created_at:
-        type: string
-      details:
-        type: string
-      entity_id:
-        type: integer
-      entity_type:
-        type: string
-      id:
-        type: integer
-      ip_address:
-        type: string
-      user_agent:
-        type: string
-      user_id:
-        type: integer
-    type: object
   pos.CreateItemRequest:
     description: Create item request payload
     properties:
@@ -894,6 +731,459 @@ definitions:
     - phone
     - store_code
     type: object
+  user.AssignRoleRequest:
+    properties:
+      assigned_by:
+        type: integer
+      branch_id:
+        type: integer
+      business_id:
+        type: integer
+      expires_at:
+        type: string
+      metadata:
+        additionalProperties: true
+        type: object
+      tenant_role_id:
+        type: integer
+    required:
+    - tenant_role_id
+    type: object
+  user.AuditLogResponse:
+    properties:
+      action:
+        type: string
+      actor_email:
+        type: string
+      actor_first_name:
+        type: string
+      actor_id:
+        type: integer
+      actor_last_name:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: integer
+      ip_address:
+        type: string
+      new_values:
+        additionalProperties: true
+        type: object
+      old_values:
+        additionalProperties: true
+        type: object
+      permission_code:
+        type: string
+      permission_id:
+        type: integer
+      reason:
+        type: string
+      target_first_name:
+        type: string
+      target_last_name:
+        type: string
+      target_role_id:
+        type: integer
+      target_role_name:
+        type: string
+      target_user_email:
+        type: string
+      target_user_id:
+        type: integer
+      tenant_id:
+        type: integer
+      user_agent:
+        type: string
+    type: object
+  user.CheckUserPermissionRequest:
+    properties:
+      branch_id:
+        type: integer
+      business_id:
+        type: integer
+      code:
+        type: string
+      tenant_id:
+        type: integer
+      user_id:
+        type: integer
+    required:
+    - code
+    - tenant_id
+    - user_id
+    type: object
+  user.CreatePermissionRequest:
+    properties:
+      action:
+        type: string
+      code:
+        type: string
+      description:
+        type: string
+      module:
+        type: string
+      resource:
+        type: string
+      scope:
+        enum:
+        - global
+        - tenant
+        - business
+        - branch
+        type: string
+    required:
+    - action
+    - code
+    - module
+    - scope
+    type: object
+  user.CreateRoleRequest:
+    properties:
+      description:
+        type: string
+      is_default:
+        type: boolean
+      metadata:
+        additionalProperties: true
+        type: object
+      name:
+        type: string
+      parent_role_id:
+        type: integer
+    required:
+    - name
+    type: object
+  user.CreateUserRequest:
+    properties:
+      avatar_url:
+        type: string
+      branch_id:
+        type: integer
+      business_id:
+        type: integer
+      email:
+        type: string
+      first_name:
+        type: string
+      last_name:
+        type: string
+      metadata:
+        additionalProperties: {}
+        type: object
+      password:
+        minLength: 8
+        type: string
+      phone:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  user.GrantPermissionRequest:
+    properties:
+      granted_by:
+        type: integer
+      metadata:
+        additionalProperties: {}
+        type: object
+      permission_id:
+        type: integer
+      scope_id:
+        type: integer
+      scope_type:
+        enum:
+        - global
+        - tenant
+        - business
+        - branch
+        type: string
+    required:
+    - permission_id
+    - scope_type
+    type: object
+  user.PermissionResponse:
+    properties:
+      action:
+        type: string
+      code:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      module:
+        type: string
+      resource:
+        type: string
+      scope:
+        type: string
+    type: object
+  user.RoleHierarchyResponse:
+    properties:
+      created_at:
+        type: string
+      depth:
+        description: For hierarchy queries
+        type: integer
+      description:
+        type: string
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      is_default:
+        type: boolean
+      level:
+        type: integer
+      metadata:
+        additionalProperties: true
+        type: object
+      name:
+        type: string
+      parent_role_id:
+        type: integer
+      tenant_id:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  user.RolePermissionResponse:
+    properties:
+      action:
+        type: string
+      code:
+        type: string
+      description:
+        type: string
+      granted_at:
+        type: string
+      granted_by:
+        type: integer
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      metadata:
+        additionalProperties: true
+        type: object
+      module:
+        type: string
+      permission_id:
+        type: integer
+      resource:
+        type: string
+      role_name:
+        type: string
+      scope_id:
+        type: integer
+      scope_type:
+        type: string
+      tenant_role_id:
+        type: integer
+    type: object
+  user.RoleResponse:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      is_default:
+        type: boolean
+      level:
+        type: integer
+      metadata:
+        additionalProperties: true
+        type: object
+      name:
+        type: string
+      parent_role_id:
+        type: integer
+      tenant_id:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  user.UpdatePermissionRequest:
+    properties:
+      action:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      module:
+        type: string
+      resource:
+        type: string
+      scope:
+        enum:
+        - global
+        - tenant
+        - business
+        - branch
+        type: string
+    required:
+    - id
+    type: object
+  user.UpdateRoleRequest:
+    properties:
+      description:
+        type: string
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      is_default:
+        type: boolean
+      metadata:
+        additionalProperties: true
+        type: object
+      name:
+        type: string
+      parent_role_id:
+        type: integer
+    required:
+    - id
+    type: object
+  user.UpdateUserRequest:
+    properties:
+      avatar_url:
+        type: string
+      branch_id:
+        type: integer
+      business_id:
+        type: integer
+      email:
+        type: string
+      first_name:
+        type: string
+      id:
+        type: integer
+      last_name:
+        type: string
+      metadata:
+        additionalProperties: {}
+        type: object
+      phone:
+        type: string
+    required:
+    - id
+    type: object
+  user.UserPermissionResponse:
+    properties:
+      action:
+        type: string
+      code:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      module:
+        type: string
+      resource:
+        type: string
+      role_name:
+        type: string
+      scope_id:
+        type: integer
+      scope_type:
+        type: string
+    type: object
+  user.UserResponse:
+    properties:
+      avatar_url:
+        type: string
+      branch_id:
+        type: integer
+      branch_name:
+        type: string
+      business_id:
+        type: integer
+      business_name:
+        type: string
+      created_at:
+        type: string
+      email:
+        type: string
+      email_verified:
+        type: boolean
+      first_name:
+        type: string
+      id:
+        type: integer
+      is_active:
+        description: |-
+          Timezone      string                 `json:"timezone"`
+          Language      string                 `json:"language"`
+        type: boolean
+      last_login_at:
+        type: string
+      last_name:
+        type: string
+      metadata:
+        additionalProperties: true
+        type: object
+      phone:
+        type: string
+      roles:
+        items:
+          $ref: '#/definitions/user.RoleResponse'
+        type: array
+      tenant_name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  user.UserRoleAssignmentResponse:
+    properties:
+      assigned_at:
+        type: string
+      assigned_by:
+        type: integer
+      branch_id:
+        type: integer
+      branch_name:
+        type: string
+      business_id:
+        type: integer
+      business_name:
+        type: string
+      expires_at:
+        type: string
+      id:
+        type: integer
+      is_active:
+        type: boolean
+      metadata:
+        additionalProperties: true
+        type: object
+      role_description:
+        type: string
+      role_name:
+        type: string
+      tenant_role_id:
+        type: integer
+      user_email:
+        type: string
+      user_first_name:
+        type: string
+      user_id:
+        type: integer
+      user_last_name:
+        type: string
+    type: object
 info:
   contact: {}
   description: |
@@ -927,740 +1217,6 @@ info:
   title: Nucleus ERP API
   version: 1.0.0
 paths:
-  /api/v1/admin/login-history:
-    get:
-      consumes:
-      - application/json
-      description: Retrieve login history for all users
-      parameters:
-      - description: Maximum number of logs to return (default 100, max 1000)
-        in: query
-        name: limit
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "400":
-          description: Bad request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get login history
-      tags:
-      - admin
-  /api/v1/admin/roles:
-    get:
-      description: Get a list of all roles in the system
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: List of roles
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: List all roles
-      tags:
-      - admin
-    post:
-      consumes:
-      - application/json
-      description: Create a new role in the system
-      parameters:
-      - description: Role creation data
-        in: body
-        name: role
-        required: true
-        schema:
-          $ref: '#/definitions/auth.CreateRoleRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Role created successfully
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Create a new role
-      tags:
-      - admin
-  /api/v1/admin/roles/{id}:
-    delete:
-      description: Delete a role from the system
-      parameters:
-      - description: Role ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      responses:
-        "204":
-          description: Role deleted successfully
-        "400":
-          description: Bad request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Delete role
-      tags:
-      - admin
-    get:
-      description: Get detailed information about a specific role
-      parameters:
-      - description: Role ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Role details
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: Role not found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get role by ID
-      tags:
-      - admin
-    put:
-      consumes:
-      - application/json
-      description: Update role information
-      parameters:
-      - description: Role ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Role update data
-        in: body
-        name: role
-        required: true
-        schema:
-          $ref: '#/definitions/auth.UpdateRoleRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Role updated successfully
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Update role
-      tags:
-      - admin
-  /api/v1/admin/roles/{id}/permission:
-    get:
-      consumes:
-      - application/json
-      description: Retrieve permissions for a specific role
-      parameters:
-      - description: Role ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "400":
-          description: Bad request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get role permissions
-      tags:
-      - admin
-    post:
-      consumes:
-      - application/json
-      description: Add a permission to a specific role
-      parameters:
-      - description: Role ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Permission ID
-        in: body
-        name: permission_id
-        required: true
-        schema:
-          $ref: '#/definitions/auth.ManageRolePermissionRequest'
-      produces:
-      - application/json
-      responses:
-        "204":
-          description: Permission added to role
-        "400":
-          description: Bad request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Add permission to role
-      tags:
-      - admin
-  /api/v1/admin/roles/{id}/permission/{permission_id}:
-    delete:
-      consumes:
-      - application/json
-      description: Remove a permission from a specific role
-      parameters:
-      - description: Role ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Permission ID
-        in: path
-        name: permission_id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "204":
-          description: Permission removed from role
-        "400":
-          description: Bad request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Remove permission from role
-      tags:
-      - admin
-  /api/v1/admin/users:
-    get:
-      description: Get a list of all users in the system
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: List of users
-          schema:
-            items:
-              additionalProperties: true
-              type: object
-            type: array
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: List all users
-      tags:
-      - admin
-    post:
-      consumes:
-      - application/json
-      description: Create a new user account with role assignment
-      parameters:
-      - description: User creation data
-        in: body
-        name: user
-        required: true
-        schema:
-          $ref: '#/definitions/auth.CreateUserRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: User created successfully
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Create a new user
-      tags:
-      - admin
-  /api/v1/admin/users/{id}:
-    delete:
-      description: Delete a user account from the system
-      parameters:
-      - description: User ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      responses:
-        "204":
-          description: User deleted successfully
-        "400":
-          description: Bad request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Delete user
-      tags:
-      - admin
-    get:
-      description: Get detailed information about a specific user
-      parameters:
-      - description: User ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: User details
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: User not found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get user by ID
-      tags:
-      - admin
-    put:
-      consumes:
-      - application/json
-      description: Update user account information and settings
-      parameters:
-      - description: User ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: User update data
-        in: body
-        name: user
-        required: true
-        schema:
-          $ref: '#/definitions/auth.UpdateUserRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: User updated successfully
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Update user information
-      tags:
-      - admin
-  /api/v1/admin/users/{id}/reset-password:
-    post:
-      consumes:
-      - application/json
-      description: Reset password for a specific user
-      parameters:
-      - description: User ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: New password data
-        in: body
-        name: password
-        required: true
-        schema:
-          $ref: '#/definitions/auth.ResetPasswordRequest'
-      responses:
-        "204":
-          description: Password reset successfully
-        "400":
-          description: Bad request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Reset user password
-      tags:
-      - admin
-  /api/v1/auth/forgot-password:
-    post:
-      consumes:
-      - application/json
-      description: Initiate password reset by sending a reset code to the user's email
-      parameters:
-      - description: Forgot Password Request
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/auth.ForgotPasswordRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Reset code sent to email
-        "400":
-          description: Bad request
-          schema:
-            $ref: '#/definitions/auth.BadRequestResponse'
-        "404":
-          description: User not found
-          schema:
-            $ref: '#/definitions/auth.UnauthorizedResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/auth.InternalServerErrorResponse'
-      summary: Forgot Password
-      tags:
-      - auth
-  /api/v1/auth/login:
-    post:
-      consumes:
-      - application/json
-      description: Authenticate user with email or username and return JWT token
-      parameters:
-      - description: Login credentials (email or username)
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/auth.LoginRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Login successful
-          schema:
-            $ref: '#/definitions/auth.LoginResponse'
-        "400":
-          description: Bad request
-          schema:
-            $ref: '#/definitions/auth.BadRequestResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/auth.UnauthorizedResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/auth.InternalServerErrorResponse'
-      summary: User login
-      tags:
-      - auth
-  /api/v1/auth/logout:
-    post:
-      consumes:
-      - application/json
-      description: Logout user and invalidate JWT token
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Logout successful
-        "400":
-          description: Bad request
-          schema:
-            $ref: '#/definitions/auth.BadRequestResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/auth.UnauthorizedResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/auth.InternalServerErrorResponse'
-      summary: User logout
-      tags:
-      - auth
-  /api/v1/auth/refresh:
-    post:
-      consumes:
-      - application/json
-      description: Refresh JWT token using a valid refresh token
-      parameters:
-      - description: Refresh token request
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/auth.RefreshRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Token refreshed successfully
-          schema:
-            $ref: '#/definitions/auth.RefreshResponse'
-        "400":
-          description: Bad request
-          schema:
-            $ref: '#/definitions/auth.BadRequestResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/auth.UnauthorizedResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/auth.InternalServerErrorResponse'
-      summary: Refresh JWT token
-      tags:
-      - auth
-  /api/v1/auth/register:
-    post:
-      consumes:
-      - application/json
-      description: Create admin with email, username, password and return JWT token
-      parameters:
-      - description: Register credentials (email, username and password)
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/auth.RegisterAdminRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Registration successful
-          schema:
-            $ref: '#/definitions/auth.RegisterResponse'
-        "400":
-          description: Bad request
-          schema:
-            $ref: '#/definitions/auth.BadRequestResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/auth.UnauthorizedResponse'
-        "500":
-          description: Unable to send email at this time, request a new verification
-            code for example@email.com
-          schema:
-            type: string
-      summary: Admin Register
-      tags:
-      - auth
-  /api/v1/auth/reset-password:
-    post:
-      consumes:
-      - application/json
-      description: Reset password using email, reset code, and new password
-      parameters:
-      - description: Reset Password Request
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/auth.ResetAdminPasswordRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Password reset successful
-        "400":
-          description: Bad request or invalid code
-          schema:
-            $ref: '#/definitions/auth.BadRequestResponse'
-        "404":
-          description: User not found
-          schema:
-            $ref: '#/definitions/auth.UnauthorizedResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/auth.InternalServerErrorResponse'
-      summary: Reset Password
-      tags:
-      - auth
-  /api/v1/auth/verify-email:
-    post:
-      consumes:
-      - application/json
-      description: Verify admin email with email and code
-      parameters:
-      - description: Verify Email Request
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/auth.VerifyEmailRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Email verified successfully
-        "400":
-          description: Bad request
-          schema:
-            $ref: '#/definitions/auth.BadRequestResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/auth.UnauthorizedResponse'
-        "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/auth.InternalServerErrorResponse'
-      summary: Verify Admin Email
-      tags:
-      - auth
   /api/v1/inventory/brand:
     post:
       consumes:
@@ -1794,32 +1350,6 @@ paths:
       tags:
       - inventory
   /api/v1/org:
-    get:
-      consumes:
-      - application/json
-      description: Retrieve all businesses owned by the authenticated user.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: List of businesses
-          schema:
-            items:
-              $ref: '#/definitions/business.ListBusinessResponse'
-            type: array
-        "400":
-          description: Invalid request
-        "401":
-          description: 'Unauthorized: missing or invalid token'
-        "403":
-          description: 'Forbidden: you do not have access'
-        "500":
-          description: Internal server error
-      security:
-      - BearerAuth: []
-      summary: List organizations
-      tags:
-      - Organization
     post:
       consumes:
       - multipart/form-data
@@ -1934,7 +1464,7 @@ paths:
           description: Internal server error
       security:
       - BearerAuth: []
-      summary: Delete an organization
+      summary: Delete an organization [change this to Deactivate]
       tags:
       - Organization
     get:
@@ -1977,7 +1507,8 @@ paths:
           schema:
             type: string
       security:
-      - BearerAuth: []
+      - ApiKeyAuth: []
+        BearerAuth: []
       summary: Get an organization
       tags:
       - Organization
@@ -2050,6 +1581,31 @@ paths:
       summary: Create a branch
       tags:
       - Organization/Branch
+  /api/v1/org/branch/{branch_id}/{org_id}:
+    get:
+      consumes:
+      - application/json
+      description: Fetch a branch.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/business.CreateBranchResponse'
+        "400":
+          description: Invalid request data
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - BearerAuth: []
+      summary: fetch a branch
+      tags:
+      - Organization/Branch
   /api/v1/org/branch/{id}:
     delete:
       consumes:
@@ -2084,30 +1640,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Delete a branch
-      tags:
-      - Organization/Branch
-    get:
-      consumes:
-      - application/json
-      description: Fetch a branch.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/business.CreateBranchResponse'
-        "400":
-          description: Invalid request data
-        "401":
-          description: Unauthorized
-        "403":
-          description: Forbidden
-        "500":
-          description: Internal server error
-      security:
-      - BearerAuth: []
-      summary: fetch a branch
       tags:
       - Organization/Branch
     patch:
@@ -2187,29 +1719,572 @@ paths:
       summary: Create a new supplier
       tags:
       - Organization/Supplier
-  /logs:
+  /api/v1/orgs:
     get:
       consumes:
       - application/json
-      description: Gets 100 system log entries.
+      description: Retrieve all businesses owned by the authenticated user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of businesses
+          schema:
+            items:
+              $ref: '#/definitions/business.ListBusinessResponse'
+            type: array
+        "400":
+          description: Invalid request
+        "401":
+          description: 'Unauthorized: missing or invalid token'
+        "403":
+          description: 'Forbidden: you do not have access'
+        "500":
+          description: Internal server error
+      security:
+      - BearerAuth: []
+      summary: List organizations
+      tags:
+      - Organization
+  /api/v1/tenant/forgot-password:
+    post:
+      consumes:
+      - application/json
+      description: Initiate password reset by sending a reset code to the user's email
+      parameters:
+      - description: Forgot Password Request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.ForgotPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Reset code sent to email
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/auth.BadRequestResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/auth.UnauthorizedResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/auth.InternalServerErrorResponse'
+      summary: Forgot Password
+      tags:
+      - Tenants
+  /api/v1/tenant/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Login credentials (email)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Login successful
+          schema:
+            $ref: '#/definitions/auth.LoginResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/auth.BadRequestResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/auth.UnauthorizedResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/auth.InternalServerErrorResponse'
+      summary: Tenant login
+      tags:
+      - Tenants
+  /api/v1/tenant/logout:
+    post:
+      consumes:
+      - application/json
+      description: Logout tenant and invalidate JWT token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Logout successful
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/auth.BadRequestResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/auth.UnauthorizedResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/auth.InternalServerErrorResponse'
+      summary: Tenant logout
+      tags:
+      - Tenants
+  /api/v1/tenant/register:
+    post:
+      consumes:
+      - application/json
+      description: Create tenant with email, password and return JWT token
+      parameters:
+      - description: Register credentials (email and password)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.RegisterTenantRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Registration successful
+          schema:
+            $ref: '#/definitions/auth.RegisterResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/auth.BadRequestResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/auth.UnauthorizedResponse'
+        "500":
+          description: Unable to send email at this time, request a new verification
+            code for example@email.com
+          schema:
+            type: string
+      summary: Tenant Register
+      tags:
+      - Tenants
+  /api/v1/tenant/reset-password:
+    post:
+      consumes:
+      - application/json
+      description: Reset password using email, reset code, and new password
+      parameters:
+      - description: Reset Password Request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.ResetAdminPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Password reset successful
+        "400":
+          description: Bad request or invalid code
+          schema:
+            $ref: '#/definitions/auth.BadRequestResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/auth.UnauthorizedResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/auth.InternalServerErrorResponse'
+      summary: Reset Password
+      tags:
+      - Tenants
+  /api/v1/tenant/verify-email:
+    post:
+      consumes:
+      - application/json
+      description: Verify admin email with email and code
+      parameters:
+      - description: Verify Email Request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.VerifyEmailRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Email verified successfully
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/auth.BadRequestResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/auth.UnauthorizedResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/auth.InternalServerErrorResponse'
+      summary: Verify Tenant Email
+      tags:
+      - Tenants
+  /api/v1/users/{id}/roles:
+    post:
+      consumes:
+      - application/json
+      description: Assign a role to a user
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Role assignment request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.AssignRoleRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/logs.LogsResponse'
+            $ref: '#/definitions/user.UserRoleAssignmentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "401":
           description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "403":
           description: Forbidden
-        "500":
-          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       security:
       - BearerAuth: []
-      summary: Fetches 100 system logs
+      summary: Assign role to user
       tags:
-      - Logs
+      - Users
+  /audit:
+    get:
+      description: Get audit logs for the current tenant
+      parameters:
+      - description: Limit (default 50)
+        in: query
+        name: limit
+        type: integer
+      - description: Offset (default 0)
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/user.AuditLogResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get audit logs
+      tags:
+      - Audit
+  /audit/users/{id}:
+    get:
+      description: Get audit logs for a specific user
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Limit (default 50)
+        in: query
+        name: limit
+        type: integer
+      - description: Offset (default 0)
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/user.AuditLogResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get user audit logs
+      tags:
+      - Audit
+  /permissions:
+    get:
+      description: List all permissions with optional module filter
+      parameters:
+      - description: Module filter
+        in: query
+        name: module
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/user.PermissionResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List permissions
+      tags:
+      - Permissions
+    post:
+      consumes:
+      - application/json
+      description: Create a new permission
+      parameters:
+      - description: Permission creation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.CreatePermissionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/user.PermissionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new permission
+      tags:
+      - Permissions
+  /permissions/{id}:
+    get:
+      description: Get permission information by ID
+      parameters:
+      - description: Permission ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/user.PermissionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get permission by ID
+      tags:
+      - Permissions
+    put:
+      consumes:
+      - application/json
+      description: Update permission information
+      parameters:
+      - description: Permission ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Permission update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.UpdatePermissionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/user.PermissionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update permission
+      tags:
+      - Permissions
+  /permissions/check:
+    post:
+      consumes:
+      - application/json
+      description: Check if a user has a specific permission
+      parameters:
+      - description: Permission check request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.CheckUserPermissionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Check user permission
+      tags:
+      - Permissions
   /pos/items:
     post:
       consumes:
@@ -2334,6 +2409,507 @@ paths:
       summary: Get sales history
       tags:
       - pos
+  /roles:
+    get:
+      description: List all roles for the current tenant
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/user.RoleResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List roles
+      tags:
+      - Roles
+    post:
+      consumes:
+      - application/json
+      description: Create a new role under the current tenant
+      parameters:
+      - description: Role creation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.CreateRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/user.RoleResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new role
+      tags:
+      - Roles
+  /roles/{id}:
+    delete:
+      description: Delete a role
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete role
+      tags:
+      - Roles
+    get:
+      description: Get role information by ID
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/user.RoleResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get role by ID
+      tags:
+      - Roles
+    put:
+      consumes:
+      - application/json
+      description: Update role information
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Role update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.UpdateRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/user.RoleResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update role
+      tags:
+      - Roles
+  /roles/{id}/children:
+    get:
+      description: Get all child roles for a specific role
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/user.RoleHierarchyResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get child roles
+      tags:
+      - Roles
+  /roles/{id}/hierarchy:
+    get:
+      description: Get hierarchy for a specific role
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/user.RoleHierarchyResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get role hierarchy
+      tags:
+      - Roles
+  /roles/{id}/permissions:
+    get:
+      description: Get all permissions assigned to a role
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/user.RolePermissionResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get role permissions
+      tags:
+      - Roles
+    post:
+      consumes:
+      - application/json
+      description: Grant a permission to a role
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Permission grant request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.GrantPermissionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/user.RolePermissionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Grant permission to role
+      tags:
+      - Roles
+  /roles/{id}/permissions/{permission_id}:
+    delete:
+      consumes:
+      - application/json
+      description: Revoke a permission from a role
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Permission ID
+        in: path
+        name: permission_id
+        required: true
+        type: integer
+      - description: Scope type
+        in: query
+        name: scope_type
+        required: true
+        type: string
+      - description: Scope ID
+        in: query
+        name: scope_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Revoke permission from role
+      tags:
+      - Roles
+  /roles/{id}/users:
+    get:
+      description: Get all users assigned to a specific role
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/user.UserRoleAssignmentResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get role users
+      tags:
+      - Roles
+  /roles/hierarchy:
+    get:
+      description: Get hierarchical view of all roles
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/user.RoleHierarchyResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get roles hierarchy
+      tags:
+      - Roles
   /store:
     post:
       consumes:
@@ -2365,12 +2941,385 @@ paths:
       summary: Create a store
       tags:
       - store
+  /users:
+    get:
+      description: List users with optional filters
+      parameters:
+      - description: Business ID filter
+        in: query
+        name: business_id
+        type: integer
+      - description: Branch ID filter
+        in: query
+        name: branch_id
+        type: integer
+      - description: Limit (default 50)
+        in: query
+        name: limit
+        type: integer
+      - description: Offset (default 0)
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/user.UserResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List users
+      tags:
+      - Users
+    post:
+      consumes:
+      - application/json
+      description: Create a new user under the current tenant
+      parameters:
+      - description: User creation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/user.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new user
+      tags:
+      - Users
+  /users/{id}:
+    delete:
+      description: Deactivate a user account
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/user.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Deactivate user
+      tags:
+      - Users
+    get:
+      description: Get user information by ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/user.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get user by ID
+      tags:
+      - Users
+    put:
+      consumes:
+      - application/json
+      description: Update user information
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: User update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/user.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/user.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update user
+      tags:
+      - Users
+  /users/{id}/permissions:
+    get:
+      description: Get all effective permissions for a user (including inherited from
+        roles)
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 'Include role hierarchy (default: true)'
+        in: query
+        name: hierarchy
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/user.UserPermissionResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get user permissions
+      tags:
+      - Users
+  /users/{id}/roles:
+    get:
+      description: Get all role assignments for a user
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/user.UserRoleAssignmentResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get user roles
+      tags:
+      - Users
+  /users/{id}/roles/{role_id}:
+    delete:
+      consumes:
+      - application/json
+      description: Remove a role assignment from a user
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Role ID
+        in: path
+        name: role_id
+        required: true
+        type: integer
+      - description: Business ID scope
+        in: query
+        name: business_id
+        type: integer
+      - description: Branch ID scope
+        in: query
+        name: branch_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Remove role from user
+      tags:
+      - Users
 securityDefinitions:
   ApiKeyAuth:
-    description: 'API Key header using the ApiKey scheme. Example: "Authorization:
-      ApiKey {key}"'
+    description: 'API Key header using the ApiKey scheme. Example: "X-API-Key": ApiKey,
+      "Value": {key}"'
     in: header
-    name: Authorization
+    name: X-API-Key
     type: apiKey
   BearerAuth:
     description: 'JWT Authorization header using the Bearer scheme. Example: "Authorization:

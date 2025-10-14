@@ -1,0 +1,26 @@
+meta {
+  name: Create a key
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseURI}}apikey
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "key_name": "test key",
+    "allowed_modules": ["pos", "inventory", "auth", "business", "user", "role", "webhook"]
+  }
+}
+
+settings {
+  encodeUrl: true
+}

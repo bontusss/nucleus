@@ -1,0 +1,29 @@
+meta {
+  name: Create a user
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseURI}}users
+  body: json
+  auth: apikey
+}
+
+auth:apikey {
+  key: X-API-Key
+  value: {{key}}
+  placement: header
+}
+
+body:json {
+  {
+    "email": "user2@gmail.com",
+    "password": "password",
+    "metadata": {"key": "value"}
+  }
+}
+
+settings {
+  encodeUrl: true
+}

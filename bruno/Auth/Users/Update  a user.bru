@@ -1,0 +1,28 @@
+meta {
+  name: Update  a user
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{baseURI}}users/9
+  body: json
+  auth: apikey
+}
+
+auth:apikey {
+  key: {{var}}
+  value: {{key}}
+  placement: header
+}
+
+body:json {
+  {
+    "last_name": "Ukandu",
+    "business_id": 67
+  }
+}
+
+settings {
+  encodeUrl: true
+}

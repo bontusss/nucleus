@@ -1,0 +1,27 @@
+meta {
+  name: Assign role to user
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseURI}}users/1/roles
+  body: json
+  auth: apikey
+}
+
+auth:apikey {
+  key: {{var}}
+  value: {{key}}
+  placement: header
+}
+
+body:json {
+  {
+    "tenant_role_id": 1
+  }
+}
+
+settings {
+  encodeUrl: true
+}

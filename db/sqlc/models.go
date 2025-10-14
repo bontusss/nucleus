@@ -6,60 +6,15 @@ package db
 
 import (
 	"database/sql"
-	"database/sql/driver"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/sqlc-dev/pqtype"
 )
 
-type PaymentType string
-
-const (
-	PaymentTypeCash       PaymentType = "cash"
-	PaymentTypePos        PaymentType = "pos"
-	PaymentTypeRoomCharge PaymentType = "room_charge"
-	PaymentTypeTransfer   PaymentType = "transfer"
-)
-
-func (e *PaymentType) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = PaymentType(s)
-	case string:
-		*e = PaymentType(s)
-	default:
-		return fmt.Errorf("unsupported scan type for PaymentType: %T", src)
-	}
-	return nil
-}
-
-type NullPaymentType struct {
-	PaymentType PaymentType `json:"payment_type"`
-	Valid       bool        `json:"valid"` // Valid is true if PaymentType is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullPaymentType) Scan(value interface{}) error {
-	if value == nil {
-		ns.PaymentType, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.PaymentType.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullPaymentType) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.PaymentType), nil
-}
-
 type ActivityLog struct {
 	ID         int32                 `json:"id"`
+	BusinessID int32                 `json:"business_id"`
 	UserID     int32                 `json:"user_id"`
 	Action     string                `json:"action"`
 	Details    string                `json:"details"`
@@ -71,30 +26,12 @@ type ActivityLog struct {
 	CreatedAt  sql.NullTime          `json:"created_at"`
 }
 
-type Admin struct {
-	ID                    int32          `json:"id"`
-	FirstName             string         `json:"first_name"`
-	LastName              string         `json:"last_name"`
-	Username              string         `json:"username"`
-	Email                 string         `json:"email"`
-	PasswordHash          string         `json:"password_hash"`
-	RoleID                int32          `json:"role_id"`
-	IsActive              bool           `json:"is_active"`
-	EmailVerified         bool           `json:"email_verified"`
-	VerificationCode      sql.NullString `json:"verification_code"`
-	VerificationExpiresAt sql.NullTime   `json:"verification_expires_at"`
-	ResetCode             sql.NullString `json:"reset_code"`
-	ResetCodeExpiresAt    sql.NullTime   `json:"reset_code_expires_at"`
-	CreatedAt             sql.NullTime   `json:"created_at"`
-	UpdatedAt             sql.NullTime   `json:"updated_at"`
-}
-
 type ApiKey struct {
 	ID                   int32        `json:"id"`
 	KeyName              string       `json:"key_name"`
 	ApiKey               string       `json:"api_key"`
 	ApiSecret            string       `json:"api_secret"`
-	UserID               int32        `json:"user_id"`
+	TenantID             int32        `json:"tenant_id"`
 	AllowedModules       []string     `json:"allowed_modules"`
 	MonthlyLimit         int32        `json:"monthly_limit"`
 	CurrentMonthRequests int32        `json:"current_month_requests"`
@@ -125,7 +62,7 @@ type Branch struct {
 	Phone      sql.NullString        `json:"phone"`
 	Email      sql.NullString        `json:"email"`
 	Metadata   pqtype.NullRawMessage `json:"metadata"`
-	IsActive   sql.NullBool          `json:"is_active"`
+	IsActive   bool                  `json:"is_active"`
 	CreatedAt  sql.NullTime          `json:"created_at"`
 	UpdatedAt  sql.NullTime          `json:"updated_at"`
 }
@@ -144,7 +81,7 @@ type Brand struct {
 
 type Business struct {
 	ID        int32                 `json:"id"`
-	OwnerID   int32                 `json:"owner_id"`
+	TenantsID int32                 `json:"tenants_id"`
 	Name      string                `json:"name"`
 	Motto     sql.NullString        `json:"motto"`
 	Email     sql.NullString        `json:"email"`
@@ -153,9 +90,19 @@ type Business struct {
 	VatNumber sql.NullString        `json:"vat_number"`
 	Country   string                `json:"country"`
 	LogoUrl   sql.NullString        `json:"logo_url"`
+	IsActive  bool                  `json:"is_active"`
 	Metadata  pqtype.NullRawMessage `json:"metadata"`
 	CreatedAt sql.NullTime          `json:"created_at"`
 	UpdatedAt sql.NullTime          `json:"updated_at"`
+}
+
+type BusinessRole struct {
+	ID          int32          `json:"id"`
+	BusinessID  sql.NullInt32  `json:"business_id"`
+	Name        string         `json:"name"`
+	Description sql.NullString `json:"description"`
+	CreatedAt   sql.NullTime   `json:"created_at"`
+	UpdatedAt   sql.NullTime   `json:"updated_at"`
 }
 
 type Category struct {
@@ -223,17 +170,23 @@ type LoginHistory struct {
 }
 
 type PasswordResetToken struct {
-	ID        int32        `json:"id"`
-	UserID    int32        `json:"user_id"`
-	Token     string       `json:"token"`
-	ExpiresAt time.Time    `json:"expires_at"`
-	Used      sql.NullBool `json:"used"`
+	ID          int32        `json:"id"`
+	DeveloperID int32        `json:"developer_id"`
+	Token       string       `json:"token"`
+	ExpiresAt   time.Time    `json:"expires_at"`
+	Used        sql.NullBool `json:"used"`
 }
 
 type Permission struct {
 	ID          int32          `json:"id"`
 	Code        string         `json:"code"`
 	Description sql.NullString `json:"description"`
+	Module      string         `json:"module"`
+	Action      string         `json:"action"`
+	Resource    sql.NullString `json:"resource"`
+	Scope       string         `json:"scope"`
+	IsActive    sql.NullBool   `json:"is_active"`
+	CreatedAt   sql.NullTime   `json:"created_at"`
 }
 
 type Purchase struct {
@@ -260,25 +213,26 @@ type PurchaseItem struct {
 	Metadata   pqtype.NullRawMessage `json:"metadata"`
 }
 
-type RefreshToken struct {
-	ID        int32        `json:"id"`
-	UserID    int32        `json:"user_id"`
-	Token     string       `json:"token"`
-	ExpiresAt time.Time    `json:"expires_at"`
-	Revoked   sql.NullBool `json:"revoked"`
-	CreatedAt sql.NullTime `json:"created_at"`
-	UpdatedAt sql.NullTime `json:"updated_at"`
-}
-
-type Role struct {
-	ID          int32          `json:"id"`
-	Name        string         `json:"name"`
-	Description sql.NullString `json:"description"`
+type RbacAuditLog struct {
+	ID           int32                 `json:"id"`
+	Action       string                `json:"action"`
+	ActorID      int32                 `json:"actor_id"`
+	TargetUserID sql.NullInt32         `json:"target_user_id"`
+	TargetRoleID sql.NullInt32         `json:"target_role_id"`
+	PermissionID sql.NullInt32         `json:"permission_id"`
+	OldValues    pqtype.NullRawMessage `json:"old_values"`
+	NewValues    pqtype.NullRawMessage `json:"new_values"`
+	Reason       sql.NullString        `json:"reason"`
+	IpAddress    string                `json:"ip_address"`
+	UserAgent    string                `json:"user_agent"`
+	TenantID     int32                 `json:"tenant_id"`
+	CreatedAt    sql.NullTime          `json:"created_at"`
 }
 
 type RolePermission struct {
-	RoleID       int32 `json:"role_id"`
-	PermissionID int32 `json:"permission_id"`
+	RoleID       int32         `json:"role_id"`
+	PermissionID int32         `json:"permission_id"`
+	BusinessID   sql.NullInt32 `json:"business_id"`
 }
 
 type Store struct {
@@ -332,6 +286,48 @@ type Tax struct {
 	UpdatedAt  sql.NullTime          `json:"updated_at"`
 }
 
+type Tenant struct {
+	ID                    int32          `json:"id"`
+	Organization          string         `json:"organization"`
+	Email                 string         `json:"email"`
+	PasswordHash          string         `json:"password_hash"`
+	IsActive              bool           `json:"is_active"`
+	Plan                  string         `json:"plan"`
+	EmailVerified         bool           `json:"email_verified"`
+	VerificationCode      sql.NullString `json:"verification_code"`
+	VerificationExpiresAt sql.NullTime   `json:"verification_expires_at"`
+	ResetCode             sql.NullString `json:"reset_code"`
+	ResetCodeExpiresAt    sql.NullTime   `json:"reset_code_expires_at"`
+	CreatedAt             sql.NullTime   `json:"created_at"`
+	UpdatedAt             sql.NullTime   `json:"updated_at"`
+}
+
+type TenantRole struct {
+	ID           int32                 `json:"id"`
+	TenantID     int32                 `json:"tenant_id"`
+	Name         string                `json:"name"`
+	Description  sql.NullString        `json:"description"`
+	ParentRoleID sql.NullInt32         `json:"parent_role_id"`
+	Level        int32                 `json:"level"`
+	IsDefault    sql.NullBool          `json:"is_default"`
+	IsActive     sql.NullBool          `json:"is_active"`
+	Metadata     pqtype.NullRawMessage `json:"metadata"`
+	CreatedAt    sql.NullTime          `json:"created_at"`
+	UpdatedAt    sql.NullTime          `json:"updated_at"`
+}
+
+type TenantRolePermission struct {
+	ID           int32                 `json:"id"`
+	TenantRoleID int32                 `json:"tenant_role_id"`
+	PermissionID int32                 `json:"permission_id"`
+	ScopeType    sql.NullString        `json:"scope_type"`
+	ScopeID      sql.NullInt32         `json:"scope_id"`
+	GrantedBy    sql.NullInt32         `json:"granted_by"`
+	GrantedAt    sql.NullTime          `json:"granted_at"`
+	IsActive     sql.NullBool          `json:"is_active"`
+	Metadata     pqtype.NullRawMessage `json:"metadata"`
+}
+
 type Unit struct {
 	ID         int32                 `json:"id"`
 	BusinessID int32                 `json:"business_id"`
@@ -352,18 +348,37 @@ type UnitConversion struct {
 }
 
 type User struct {
+	ID                    int32                 `json:"id"`
+	BusinessID            sql.NullInt32         `json:"business_id"`
+	TenantsID             int32                 `json:"tenants_id"`
+	BranchID              sql.NullInt32         `json:"branch_id"`
+	Email                 string                `json:"email"`
+	PasswordHash          string                `json:"password_hash"`
+	FirstName             sql.NullString        `json:"first_name"`
+	LastName              sql.NullString        `json:"last_name"`
+	Phone                 sql.NullString        `json:"phone"`
+	AvatarUrl             sql.NullString        `json:"avatar_url"`
+	IsActive              bool                  `json:"is_active"`
+	LastLoginAt           sql.NullTime          `json:"last_login_at"`
+	EmailVerified         sql.NullBool          `json:"email_verified"`
+	VerificationCode      sql.NullString        `json:"verification_code"`
+	VerificationExpiresAt sql.NullTime          `json:"verification_expires_at"`
+	Metadata              pqtype.NullRawMessage `json:"metadata"`
+	CreatedAt             sql.NullTime          `json:"created_at"`
+	UpdatedAt             sql.NullTime          `json:"updated_at"`
+}
+
+type UserRoleAssignment struct {
 	ID           int32                 `json:"id"`
-	Username     string                `json:"username"`
-	FirstName    string                `json:"first_name"`
-	LastName     string                `json:"last_name"`
-	Email        sql.NullString        `json:"email"`
-	PasswordHash string                `json:"password_hash"`
-	Gender       sql.NullString        `json:"gender"`
-	RoleID       sql.NullInt32         `json:"role_id"`
+	UserID       int32                 `json:"user_id"`
+	TenantRoleID int32                 `json:"tenant_role_id"`
+	BusinessID   sql.NullInt32         `json:"business_id"`
+	BranchID     sql.NullInt32         `json:"branch_id"`
+	AssignedBy   sql.NullInt32         `json:"assigned_by"`
+	AssignedAt   sql.NullTime          `json:"assigned_at"`
+	ExpiresAt    sql.NullTime          `json:"expires_at"`
 	IsActive     sql.NullBool          `json:"is_active"`
 	Metadata     pqtype.NullRawMessage `json:"metadata"`
-	CreatedAt    sql.NullTime          `json:"created_at"`
-	UpdatedAt    sql.NullTime          `json:"updated_at"`
 }
 
 type Variation struct {
@@ -397,7 +412,7 @@ type Webhook struct {
 	Url         string         `json:"url"`
 	Secret      string         `json:"secret"`
 	Events      []string       `json:"events"`
-	UserID      int32          `json:"user_id"`
+	TenantID    int32          `json:"tenant_id"`
 	IsActive    sql.NullBool   `json:"is_active"`
 	RetryCount  sql.NullInt32  `json:"retry_count"`
 	MaxRetries  sql.NullInt32  `json:"max_retries"`

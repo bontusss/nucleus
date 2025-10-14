@@ -8,7 +8,10 @@ import (
 	"nucleus/internal/auth"
 	"nucleus/internal/config"
 	"nucleus/internal/core/api"
+	"nucleus/internal/core/user"
+	"nucleus/internal/key"
 	"nucleus/internal/utils"
+	"nucleus/internal/webhook"
 	"nucleus/pkg/jwt"
 	"nucleus/pkg/monitoring/logging"
 	"strconv"
@@ -21,38 +24,48 @@ import (
 )
 
 type Handler struct {
-	service BusinessInterface
-	config  *config.Config
-	logger  *logging.Logger
+	service     BusinessInterface
+	config      *config.Config
+	logger      *logging.Logger
+	userService *user.UserService
+	webhooks    *webhook.Service
 }
 
-func NewBusinessHandler(service BusinessInterface, c *config.Config, l *logging.Logger) *Handler {
+func NewBusinessHandler(
+	service BusinessInterface,
+	c *config.Config,
+	l *logging.Logger,
+	userService *user.UserService,
+	webhooks *webhook.Service) *Handler {
 	return &Handler{
-		service: service,
-		config:  c,
-		logger:  l,
+		service:     service,
+		config:      c,
+		logger:      l,
+		userService: userService,
+		webhooks:    webhooks,
 	}
 }
 
-func (h *Handler) RegisterRoutes(r *gin.RouterGroup, authSvc *auth.Service) {
+func (h *Handler) RegisterRoutes(r *gin.RouterGroup, authSvc *auth.Service, apiKeySvc *key.Service) {
 	business := r.Group("/org")
-	business.Use(auth.AdminMiddleware(authSvc))
+	business.Use(key.APIKeyMiddleware(apiKeySvc, "business"))
+	business.Use(auth.AuthMiiddleware(authSvc))
 	// Business endpoints
 	{
-		business.POST("", auth.PermissionMiddleware(authSvc, "business:create"), h.createBusiness)
-		business.GET("/:id", auth.PermissionMiddleware(authSvc, "business:view"), h.getBusiness)
-		business.PATCH("/:id", auth.PermissionMiddleware(authSvc, "business:update"), h.updateBusiness)
+		business.POST("", h.createBusiness)
+		business.GET("/:id", h.getBusiness)
+		business.PATCH("/:id", h.updateBusiness)
 		business.DELETE("/:id", auth.PermissionMiddleware(authSvc, "business:delete"), h.deleteBusiness)
-		business.GET("", auth.PermissionMiddleware(authSvc, "business:view"), h.listBusinesses)
+		business.GET("", h.listBusinesses)
 	}
 
 	branch := business.Group("/branch")
 	{
-		branch.POST("", auth.PermissionMiddleware(authSvc, "business:create"), h.createBranch)
-		branch.GET("/:id", auth.PermissionMiddleware(authSvc, "business:view"), h.getBranch)
-		branch.PUT("/:id", auth.PermissionMiddleware(authSvc, "business:update"), h.updateBranch)
+		branch.POST("", h.createBranch)
+		branch.GET("/:branch_id/:org_id", h.getBranch)
+		branch.PUT("/:id", h.updateBranch)
 		branch.DELETE("/:id", auth.PermissionMiddleware(authSvc, "business:delete"), h.deleteBranch)
-		branch.GET("", auth.PermissionMiddleware(authSvc, "business:view"), h.listBranches)
+		branch.GET("", h.listBranches)
 	}
 
 	supplier := business.Group("/supplier")
@@ -62,15 +75,15 @@ func (h *Handler) RegisterRoutes(r *gin.RouterGroup, authSvc *auth.Service) {
 }
 
 type CreateBusinessParams struct {
-	Name      string         `form:"name" example:"Palmwineexpress hotels" binding:"required"`
-	Email     string         `form:"email" binding:"required" example:"admin@palmwinexpress.com"`
-	Website   string         `form:"website" binding:"omitempty" example:"https://palmwinexpress.com"`
-	TaxID     string         `form:"tax_id" binding:"omitempty" example:"123456789"`
-	LogoUrl   string         `form:"logo_url" binding:"omitempty" example:"https://imgur.com/234343"`
-	Motto     string         `form:"motto" binding:"omitempty"`
-	VatNumber string         `form:"vat_number"`
-	Country   string         `form:"country" binding:"required"`
-	Metadata  map[string]any `form:"metadata" binding:"omitempty"`
+	Name      string         `json:"name" example:"Palmwineexpress hotels" binding:"required"`
+	Email     string         `json:"email" binding:"required" example:"admin@palmwinexpress.com"`
+	Website   string         `json:"website" binding:"omitempty" example:"https://palmwinexpress.com"`
+	TaxID     string         `json:"tax_id" binding:"omitempty" example:"123456789"`
+	LogoUrl   string         `json:"logo_url" binding:"omitempty" example:"https://imgur.com/234343"`
+	Motto     string         `json:"motto" binding:"omitempty"`
+	VatNumber string         `json:"vat_number"`
+	Country   string         `json:"country" binding:"required"`
+	Metadata  map[string]any `json:"metadata" binding:"omitempty"`
 }
 
 // BusinessResponse represents the response returned after creating or fetching a business.
@@ -106,29 +119,27 @@ type OrgWithBranchResponse struct {
 // @Description
 // @Description ### Features
 // @Description - Accepts required and optional business details (name, email, website, tax ID, motto, etc.).
-// @Description - Allows uploading a business logo (JPG/PNG, max 2MB).
 // @Description - Supports attaching custom metadata as a JSON object.
-// @Description - Automatically sets the authenticated user as the owner of the business.
 // @Description - Logs the creation activity for auditing purposes.
+// @Description - Returns a business.created event when a business is created successfully.
 // @Description
 // @Description ### Notes
 // @Description - A default branch called "Main" is created automatically when creating an org.
 // @Description - The `metadata` field must be a valid JSON string. Example: {"industry":"Hospitality","branches":5}
-// @Description - The `logo` field must be a JPG or PNG image not exceeding 2MB.
 // @Description - On success, the response includes full business details, metadata, and timestamps.
 // @Tags Organization
-// @Accept multipart/form-data
+// @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param name formData string true "Business name"
-// @Param email formData string false "Business email"
-// @Param website formData string false "Business website"
-// @Param tax_id formData string false "Tax ID"
-// @Param motto formData string false "Motto"
-// @Param country formData string true "Country of business"
-// @Param vat_number formData string false "VAT Number"
-// @Param logo formData file false "Business logo (JPG/PNG, max 2MB)"
-// @Param metadata formData string false "Custom metadata in JSON format"
+// @Param name string true "Business name"
+// @Param email string false "Business email"
+// @Param website string false "Business website"
+// @Param tax_id string false "Tax ID"
+// @Param motto string false "Motto"
+// @Param country string true "Country of business"
+// @Param vat_number string false "VAT Number"
+// @Param logo file false "Business logo (JPG/PNG, max 2MB)"
+// @Param metadata string false "Custom metadata in JSON format"
 // @Description {
 // @Description   "industry": "Hospitality",
 // @Description   "branches": 5,
@@ -141,29 +152,22 @@ type OrgWithBranchResponse struct {
 // @Failure 500
 // @Router /api/v1/org [post]
 func (h *Handler) createBusiness(c *gin.Context) {
-	claims, ok := jwt.GetUserFromContext(c)
+	user, ok := jwt.GetUserFromContext(c)
 	if !ok {
-		h.logger.Errorf("could not get user from context")
-		api.ErrorResponse(c, 500, api.SERVERERROR)
+		api.ErrorResponse(c, 400, "error getting user from jwt claims")
 		return
 	}
 
-	// Parse form-data (multipart) instead of JSON
-	if err := c.Request.ParseMultipartForm(10 << 20); err != nil { // 10MB limit
-		api.ErrorResponse(c, 400, err.Error())
+	ok = h.userService.HasPermission(c, "business:create", 0, 0)
+	if !ok {
+		api.ErrorResponse(c, 400, "user does not have permission")
 		return
 	}
 
 	var req CreateBusinessParams
-	if err := c.ShouldBind(&req); err != nil {
+	if err := c.ShouldBindJSON(&req); err != nil {
 		api.ErrorResponse(c, 400, err.Error())
 		return
-	}
-
-	// Handle file upload if present
-	logoUrl, err := utils.UploadFile(c, "logo", "images", 2<<20) // 2MB max
-	if err == nil && logoUrl != "" {
-		req.LogoUrl = logoUrl
 	}
 
 	// --- Handle Metadata ---
@@ -177,14 +181,14 @@ func (h *Handler) createBusiness(c *gin.Context) {
 	}
 
 	var params db.CreateBusinessParams
-	err = copier.Copy(&params, &req)
+	err := copier.Copy(&params, &req)
 	if err != nil {
 		h.logger.Errorf("error copying business request data: %v", err)
 		api.ErrorResponse(c, 500, err.Error())
 		return
 	}
 
-	params.OwnerID = int32(claims.UserID)
+	params.TenantsID = int32(user.TenantID)
 
 	// Marshal metadata for DB
 	if req.Metadata != nil {
@@ -196,34 +200,35 @@ func (h *Handler) createBusiness(c *gin.Context) {
 		}
 	}
 
-	h.logger.Infof("creating business %s", params.Name)
-
-	business, branch, err := h.service.CreateBusinessWithBranch(c, params)
+	business, branch, err := h.service.CreateBusinessWithBranch(
+		c,
+		user,
+		params,
+		c.ClientIP(),
+		c.Request.UserAgent(),
+	)
 	if err != nil {
 		h.logger.Errorf("error creating a business: %v", err)
 		api.ErrorResponse(c, 500, err.Error())
 		return
 	}
 
-	// Log activity
-	_, err = h.service.LogActivity(c, db.LogActivityParams{
-		UserID:     int32(claims.UserID),
-		Action:     "Created business",
-		EntityType: "Business",
-		EntityID:   business.ID,
-		Details:    utils.WriteActivityDetails(claims.Username, claims.Email, fmt.Sprintf("Created business %s", business.Name), business.CreatedAt.Time),
-		IpAddress:  sql.NullString{Valid: true, String: utils.GetClientIP(c)},
-		UserAgent:  sql.NullString{Valid: true, String: c.Request.UserAgent()},
-	})
-
-	if err != nil {
-		h.logger.Warnf("error logging activity: %v", err)
-		// not returning error to user as business and branch have been created successfully
-	}
-
 	var meta map[string]any
 	if business.Metadata.Valid {
 		_ = json.Unmarshal(business.Metadata.RawMessage, &meta)
+	}
+
+	// Create event and send a webhook
+	event := webhook.WebhookEvent{
+		Type: "business.created",
+		Data: map[string]any{"business": business, "branch": branch},
+		Timestamp: time.Now(),
+		TenantID: user.TenantID,
+		Module: "business",
+	}
+
+	if err := h.webhooks.TriggerEvent(c, event); err != nil {
+		h.logger.Warnf("failed to trigger business.created webhook: %v", err)
 	}
 
 	api.SuccessResponse(c, 201, "Business created", OrgWithBranchResponse{
@@ -256,7 +261,7 @@ func (h *Handler) createBusiness(c *gin.Context) {
 // @Tags Organization
 // @Accept json
 // @Produce json
-// @Security BearerAuth
+// @Security BearerAuth && ApiKeyAuth
 // @Param id path int true "Business ID"
 // @Success 200 {string} BusinessResponse "Business retrieved successfully"
 // @Failure 400 {string} api.BADREQUEST "Invalid business ID supplied"
@@ -266,12 +271,19 @@ func (h *Handler) createBusiness(c *gin.Context) {
 // @Failure 500 {string} api.SERVERERROR "Internal server error"
 // @Router /api/v1/org/{id} [get]
 func (h *Handler) getBusiness(c *gin.Context) {
+	fmt.Printf("starting getbusiness")
 	claims, ok := jwt.GetUserFromContext(c)
 	if !ok {
-		h.logger.Errorf("could not get user from context")
-		api.ErrorResponse(c, 500, api.SERVERERROR)
+		api.ErrorResponse(c, 500, "could not get user from context")
 		return
 	}
+
+	ok = h.userService.HasPermission(c, "business:read", 0, 0)
+	if !ok {
+		api.ErrorResponse(c, 400, "user does not have permission")
+		return
+	}
+
 	id := c.Param("id")
 	bid, err := strconv.Atoi(id)
 	if err != nil {
@@ -281,8 +293,8 @@ func (h *Handler) getBusiness(c *gin.Context) {
 	}
 
 	params := db.GetBusinessParams{
-		ID:      int32(bid),
-		OwnerID: int32(claims.UserID),
+		ID:        int32(bid),
+		TenantsID: int32(claims.UserID),
 	}
 
 	fmt.Printf("business id: %d and owner id: %d", bid, claims.UserID)
@@ -354,6 +366,12 @@ func (h *Handler) updateBusiness(c *gin.Context) {
 		return
 	}
 
+	ok = h.userService.HasPermission(c, "business:update", 0, 0)
+	if !ok {
+		api.ErrorResponse(c, 400, "user does not have permission")
+		return
+	}
+
 	// Parse business ID
 	bid, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -372,20 +390,20 @@ func (h *Handler) updateBusiness(c *gin.Context) {
 
 	// Ensure the business exists and belongs to this user
 	getParams := db.GetBusinessParams{
-		ID:      int32(bid),
-		OwnerID: int32(claims.UserID),
+		ID:        int32(bid),
+		TenantsID: int32(claims.UserID),
 	}
 	b, err := h.service.GetBusiness(c, getParams)
 	if err != nil {
 		h.logger.Errorf("get business by id err: %v", err)
-		api.ErrorResponse(c, 404, "Business not found or not owned by you")
+		api.ErrorResponse(c, 404, err.Error())
 		return
 	}
 
 	updateParams := db.UpdateBusinessParams{
-		ID:       int32(bid),
-		OwnerID:  int32(claims.UserID),
-		Metadata: b.Metadata,
+		ID:        int32(bid),
+		TenantsID: int32(claims.UserID),
+		Metadata:  b.Metadata,
 	}
 
 	// Patch optional fields
@@ -397,7 +415,7 @@ func (h *Handler) updateBusiness(c *gin.Context) {
 	utils.PatchNullString(&updateParams.LogoUrl, req.LogoUrl)
 	utils.PatchMetadata(&updateParams.Metadata, req.Metadata)
 	// Update the business
-	updatedBusiness, err := h.service.UpdateBusiness(c, updateParams)
+	updatedBusiness, err := h.service.UpdateBusiness(c, updateParams, claims, c.ClientIP(), c.Request.UserAgent())
 	if err != nil {
 		h.logger.Errorf("could not update business: %v", err)
 		api.ErrorResponse(c, 500, err.Error())
@@ -405,16 +423,16 @@ func (h *Handler) updateBusiness(c *gin.Context) {
 	}
 
 	// Log activity
-	_, err = h.service.LogActivity(c, db.LogActivityParams{
-		UserID:    int32(claims.UserID),
-		Action:    "update_business",
-		Details:   utils.WriteActivityDetails(claims.Username, claims.Email, "update business", updatedBusiness.CreatedAt.Time),
-		IpAddress: sql.NullString{Valid: true, String: utils.GetClientIP(c)},
-		UserAgent: sql.NullString{Valid: true, String: c.Request.UserAgent()},
-	})
-	if err != nil {
-		h.logger.Warnf("error logging activity: %v", err)
-	}
+	// _, err = h.service.CreateActivityLog(c, db.CreateActivityLogParams{
+	// 	UserID:    int32(claims.UserID),
+	// 	Action:    "update_business",
+	// 	Details:   utils.WriteActivityDetails(claims.Email, "update business", updatedBusiness.CreatedAt.Time),
+	// 	IpAddress: sql.NullString{Valid: true, String: utils.GetClientIP(c)},
+	// 	UserAgent: sql.NullString{Valid: true, String: c.Request.UserAgent()},
+	// })
+	// if err != nil {
+	// 	h.logger.Warnf("error logging activity: %v", err)
+	// }
 
 	api.SuccessResponse(c, 200, "Business updated", UpdateBusinessResponse{
 		ID:       updatedBusiness.ID,
@@ -430,7 +448,7 @@ func (h *Handler) updateBusiness(c *gin.Context) {
 }
 
 // DeleteOrg godoc
-// @Summary Delete an organization
+// @Summary Delete an organization [change this to Deactivate]
 // @Description Permanently delete a business owned by the authenticated user.
 // Only the owner of the business can perform this action.
 // @Tags Organization
@@ -462,32 +480,17 @@ func (h *Handler) deleteBusiness(c *gin.Context) {
 	}
 
 	params := db.DeleteBusinessParams{
-		ID:      int32(bid),
-		OwnerID: int32(claims.UserID),
+		ID:        int32(bid),
+		TenantsID: int32(claims.UserID),
 	}
 
-	business, err := h.service.DeleteBusiness(c, params)
+	_, err = h.service.DeleteBusiness(c, params)
 	if err != nil {
 		h.logger.Errorf("error deleteing business with is %d: %v", bid, err)
 		api.ErrorResponse(c, 500, err.Error())
 		return
 	}
-
-	// Log activity
-	_, err = h.service.LogActivity(c, db.LogActivityParams{
-		UserID:     int32(claims.UserID),
-		Action:     "Deleted business",
-		EntityType: "Business",
-		EntityID:   business.ID,
-		Details:    utils.WriteActivityDetails(claims.Username, claims.Email, fmt.Sprintf("Deleted business %s", business.Name), business.CreatedAt.Time),
-		IpAddress:  sql.NullString{Valid: true, String: utils.GetClientIP(c)},
-		UserAgent:  sql.NullString{Valid: true, String: c.Request.UserAgent()},
-	})
-
-	if err != nil {
-		h.logger.Warnf("error logging activity: %v", err)
-		// not returning error to user as business and branch have been created successfully
-	}
+	// Create audit
 
 	api.SuccessResponse(c, 200, "business deleted", nil)
 }
@@ -518,12 +521,18 @@ type ListBusinessResponse struct {
 // @Failure 401 "Unauthorized: missing or invalid token"
 // @Failure 403 "Forbidden: you do not have access"
 // @Failure 500 "Internal server error"
-// @Router /api/v1/org [get]
+// @Router /api/v1/orgs [get]
 func (h *Handler) listBusinesses(c *gin.Context) {
 	claims, ok := jwt.GetUserFromContext(c)
 	if !ok {
 		h.logger.Errorf("could not get user from context")
 		api.ErrorResponse(c, 500, api.SERVERERROR)
+		return
+	}
+
+	ok = h.userService.HasPermission(c, "business:read", 0, 0)
+	if !ok {
+		api.ErrorResponse(c, 400, "user does not have permission")
 		return
 	}
 
@@ -598,6 +607,12 @@ func (h *Handler) createBranch(c *gin.Context) {
 		return
 	}
 
+	ok = h.userService.HasPermission(c, "branch:create", 0, 0)
+	if !ok {
+		api.ErrorResponse(c, 400, "user does not have permission")
+		return
+	}
+
 	var req CreateBranchRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.logger.Errorf("create branch request binding error: %v", err)
@@ -614,8 +629,8 @@ func (h *Handler) createBranch(c *gin.Context) {
 	}
 
 	getParams := db.GetBusinessParams{
-		ID:      int32(req.BusinessID),
-		OwnerID: int32(claims.UserID),
+		ID:        int32(req.BusinessID),
+		TenantsID: int32(claims.UserID),
 	}
 
 	// check if business exists
@@ -630,13 +645,12 @@ func (h *Handler) createBranch(c *gin.Context) {
 		return
 	}
 
-	// convert map[string]any to JSON
 	params.Metadata = utils.MarshalMetadata(req.Metadata)
-	params.IsActive.Bool = req.IsActive
-	params.IsActive.Valid = true
+	params.IsActive = req.IsActive
+	// params.IsActive = true
 
 	// create branch
-	branch, err := h.service.CreateBranch(c, params)
+	branch, err := h.service.CreateBranch(c, params, claims, c.ClientIP(), c.Request.UserAgent())
 	if err != nil {
 		h.logger.Errorf("error creating branch: %v", err)
 		api.ErrorResponse(c, 500, err.Error())
@@ -644,7 +658,7 @@ func (h *Handler) createBranch(c *gin.Context) {
 	}
 
 	// add activity log here
-	_, err = h.service.LogActivity(c, db.LogActivityParams{
+	_, err = h.service.CreateActivityLog(c, db.CreateActivityLogParams{
 		UserID:     int32(claims.UserID),
 		Action:     "Created branch",
 		EntityType: "Branch",
@@ -665,7 +679,7 @@ func (h *Handler) createBranch(c *gin.Context) {
 		Address:    branch.Address.String,
 		Phone:      branch.Phone.String,
 		Email:      branch.Email.String,
-		IsActive:   branch.IsActive.Bool,
+		IsActive:   branch.IsActive,
 		Metadata:   utils.UnmarshalMetadata(branch.Metadata),
 	})
 }
@@ -682,16 +696,30 @@ func (h *Handler) createBranch(c *gin.Context) {
 // @Failure 401 "Unauthorized"
 // @Failure 403 "Forbidden"
 // @Failure 500 "Internal server error"
-// @Router /api/v1/org/branch/{id} [get]
+// @Router /api/v1/org/branch/{branch_id}/{org_id} [get]
 func (h *Handler) getBranch(c *gin.Context) {
-	id := c.Param("id")
-	branchID, err := strconv.Atoi(id)
-	if err != nil {
-		h.logger.Errorf("get branch id str conv err: %v", err)
-		api.ErrorResponse(c, 400, api.INVALID_REQUEST_DATA)
+	ok := h.userService.HasPermission(c, "branch:read", 0, 0)
+	if !ok {
+		api.ErrorResponse(c, 400, "user does not have permission")
 		return
 	}
-	branch, err := h.service.GetBranch(c, int32(branchID))
+
+	branchID, err := strconv.Atoi(c.Param("branch_id"))
+	if err != nil {
+		h.logger.Errorf("get branch id str conv err: %v", err)
+		api.ErrorResponse(c, 400, err.Error())
+		return
+	}
+	orgid, err := strconv.Atoi(c.Param("org_id"))
+	if err != nil {
+		h.logger.Errorf("get org id str conv err: %v", err)
+		api.ErrorResponse(c, 400, err.Error())
+		return
+	}
+	branch, err := h.service.GetBranch(c, db.GetBranchParams{
+		ID:         int32(branchID),
+		BusinessID: int32(orgid),
+	})
 	if err != nil {
 		h.logger.Errorf("error getting branch with is %d: %v", branchID, err)
 		api.ErrorResponse(c, 500, err.Error())
@@ -729,12 +757,12 @@ type UpdateBranchRequest struct {
 // @Failure 500 "Internal server error"
 // @Router /api/v1/org/branch/{id} [patch]
 func (h *Handler) updateBranch(c *gin.Context) {
-	claims, ok := jwt.GetUserFromContext(c)
-	if !ok {
-		h.logger.Errorf("could not get user from context")
-		api.ErrorResponse(c, 500, api.SERVERERROR)
-		return
-	}
+	// claims, ok := jwt.GetUserFromContext(c)
+	// if !ok {
+	// 	h.logger.Errorf("could not get user from context")
+	// 	api.ErrorResponse(c, 500, api.SERVERERROR)
+	// 	return
+	// }
 
 	id := c.Param("id")
 	_, err := strconv.Atoi(id)
@@ -766,20 +794,20 @@ func (h *Handler) updateBranch(c *gin.Context) {
 	}
 
 	// add activity log here
-	_, err = h.service.LogActivity(c, db.LogActivityParams{
-		UserID:     int32(claims.UserID),
-		Action:     "Updated branch",
-		EntityType: "Branch",
-		EntityID:   branch.ID,
-		Details:    utils.WriteActivityDetails(claims.Username, claims.Email, fmt.Sprintf("Updated branch %s for business id %d", branch.Name, branch.BusinessID), branch.UpdatedAt.Time),
-		IpAddress:  sql.NullString{Valid: true, String: utils.GetClientIP(c)},
-		UserAgent:  sql.NullString{Valid: true, String: c.Request.UserAgent()},
-	})
+	// _, err = h.service.CreateActivityLog(c, db.CreateActivityLogParams{
+	// 	UserID:     int32(claims.UserID),
+	// 	Action:     "Updated branch",
+	// 	EntityType: "Branch",
+	// 	EntityID:   branch.ID,
+	// 	Details:    utils.WriteActivityDetails(claims.Username, claims.Email, fmt.Sprintf("Updated branch %s for business id %d", branch.Name, branch.BusinessID), branch.UpdatedAt.Time),
+	// 	IpAddress:  sql.NullString{Valid: true, String: utils.GetClientIP(c)},
+	// 	UserAgent:  sql.NullString{Valid: true, String: c.Request.UserAgent()},
+	// })
 
-	if err != nil {
-		h.logger.Warnf("error logging activity: %v", err)
-		// not returning error to user as branch has been created successfully
-	}
+	// if err != nil {
+	// 	h.logger.Warnf("error logging activity: %v", err)
+	// 	// not returning error to user as branch has been created successfully
+	// }
 
 	api.SuccessResponse(c, 200, "branch updated", branch)
 
@@ -803,12 +831,12 @@ func (h *Handler) updateBranch(c *gin.Context) {
 // @Failure 500 "Internal server error"
 // @Router /api/v1/org/branch/{id} [delete]
 func (h *Handler) deleteBranch(c *gin.Context) {
-	claims, ok := jwt.GetUserFromContext(c)
-	if !ok {
-		h.logger.Errorf("could not get user from context")
-		api.ErrorResponse(c, 500, api.SERVERERROR)
-		return
-	}
+	// claims, ok := jwt.GetUserFromContext(c)
+	// if !ok {
+	// 	h.logger.Errorf("could not get user from context")
+	// 	api.ErrorResponse(c, 500, api.SERVERERROR)
+	// 	return
+	// }
 
 	id := c.Param("id")
 	bid, err := strconv.Atoi(id)
@@ -817,7 +845,7 @@ func (h *Handler) deleteBranch(c *gin.Context) {
 		api.ErrorResponse(c, 400, err.Error())
 		return
 	}
-	branch, err := h.service.DeleteBranch(c, int32(bid))
+	_, err = h.service.DeleteBranch(c, int32(bid))
 	if err != nil {
 		h.logger.Errorf("error deleting branch with is %d: %v", bid, err)
 		api.ErrorResponse(c, 500, err.Error())
@@ -827,20 +855,20 @@ func (h *Handler) deleteBranch(c *gin.Context) {
 	api.SuccessResponse(c, 200, "branch deleted", nil)
 
 	// Log activity
-	_, err = h.service.LogActivity(c, db.LogActivityParams{
-		UserID:     int32(claims.UserID),
-		Action:     "Deleted branch",
-		EntityType: "Branch",
-		EntityID:   branch.ID,
-		Details:    utils.WriteActivityDetails(claims.Username, claims.Email, fmt.Sprintf("Deleted branch %s", branch.Name), branch.CreatedAt.Time),
-		IpAddress:  sql.NullString{Valid: true, String: utils.GetClientIP(c)},
-		UserAgent:  sql.NullString{Valid: true, String: c.Request.UserAgent()},
-	})
+	// _, err = h.service.CreateActivityLog(c, db.CreateActivityLogParams{
+	// 	UserID:     int32(claims.UserID),
+	// 	Action:     "Deleted branch",
+	// 	EntityType: "Branch",
+	// 	EntityID:   branch.ID,
+	// 	Details:    utils.WriteActivityDetails(claims.Username, claims.Email, fmt.Sprintf("Deleted branch %s", branch.Name), branch.CreatedAt.Time),
+	// 	IpAddress:  sql.NullString{Valid: true, String: utils.GetClientIP(c)},
+	// 	UserAgent:  sql.NullString{Valid: true, String: c.Request.UserAgent()},
+	// })
 
-	if err != nil {
-		h.logger.Warnf("error logging activity: %v", err)
-		// not returning error to user as business and branch have been created successfully
-	}
+	// if err != nil {
+	// 	h.logger.Warnf("error logging activity: %v", err)
+	// 	// not returning error to user as business and branch have been created successfully
+	// }
 
 	api.SuccessResponse(c, 200, "branch deleted", nil)
 
@@ -891,8 +919,8 @@ func (h *Handler) createSupplier(c *gin.Context) {
 	}
 
 	_, err := h.service.GetBusiness(c, db.GetBusinessParams{
-		ID:      req.BusinessID,
-		OwnerID: int32(claims.UserID),
+		ID:        req.BusinessID,
+		TenantsID: int32(claims.UserID),
 	})
 
 	if err != nil {
@@ -922,19 +950,19 @@ func (h *Handler) createSupplier(c *gin.Context) {
 		return
 	}
 
-	_, err = h.service.LogActivity(c, db.LogActivityParams{
-		UserID:     int32(claims.UserID),
-		Action:     "Created supplier",
-		EntityType: "Supplier",
-		EntityID:   supplier.ID,
-		Details:    utils.WriteActivityDetails(claims.Username, claims.Email, fmt.Sprintf("Created supplier %s", supplier.Name), supplier.CreatedAt.Time),
-		IpAddress:  sql.NullString{Valid: true, String: utils.GetClientIP(c)},
-		UserAgent:  sql.NullString{Valid: true, String: c.Request.UserAgent()},
-	})
+	// _, err = h.service.CreateActivityLog(c, db.CreateActivityLogParams{
+	// 	UserID:     int32(claims.UserID),
+	// 	Action:     "Created supplier",
+	// 	EntityType: "Supplier",
+	// 	EntityID:   supplier.ID,
+	// 	Details:    utils.WriteActivityDetails(claims.Username, claims.Email, fmt.Sprintf("Created supplier %s", supplier.Name), supplier.CreatedAt.Time),
+	// 	IpAddress:  sql.NullString{Valid: true, String: utils.GetClientIP(c)},
+	// 	UserAgent:  sql.NullString{Valid: true, String: c.Request.UserAgent()},
+	// })
 
-	if err != nil {
-		h.logger.Warnf("error logging activity: %v", err)
-	}
+	// if err != nil {
+	// 	h.logger.Warnf("error logging activity: %v", err)
+	// }
 
 	meta := utils.UnmarshalMetadata(supplier.Metadata)
 

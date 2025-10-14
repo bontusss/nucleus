@@ -18,6 +18,7 @@ import (
 	"database/sql"
 	"fmt"
 	db "nucleus/db/sqlc"
+	"nucleus/pkg/jwt"
 )
 
 type Business struct {
@@ -32,17 +33,46 @@ func NewBusiness(queries Querier, db *sql.DB) *Business {
 	}
 }
 
+// func (c *Business) startTx(ctx context.Context) (*db.Queries, error) {
+// 	q, ok := c.queries.(*db.Queries)
+// 	if !ok {
+// 		return nil, nil
+// 	}
+
+// 	// Start a transaction
+// 	tx, err := c.db.BeginTx(ctx, nil)
+// 	if err != nil {
+// 		return nil, nil
+// 	}
+// 	defer func() {
+// 		if err != nil {
+// 			tx.Rollback()
+// 		} else {
+// 			tx.Commit()
+// 		}
+// 	}()
+
+// 	txQueries := q.WithTx(tx)
+// 	return txQueries, nil
+// }
+
 // CreateBusiness creates a new business with a default branch.
-func (c *Business) CreateBusinessWithBranch(ctx context.Context, params db.CreateBusinessParams) (db.Business, db.Branch, error) {
+func (c *Business) CreateBusinessWithBranch(ctx context.Context, claims *jwt.Claims, params db.CreateBusinessParams, ipAddress, userAgent string) (*db.Business, *db.Branch, error) {
+
+	// txQueries, err := c.startTx(ctx)
+	// if err != nil {
+	// 	return nil, nil, fmt.Errorf("tx error")
+	// }
+
 	q, ok := c.queries.(*db.Queries)
 	if !ok {
-		return db.Business{}, db.Branch{}, nil
+		return nil, nil, nil
 	}
 
 	// Start a transaction
 	tx, err := c.db.BeginTx(ctx, nil)
 	if err != nil {
-		return db.Business{}, db.Branch{}, err
+		return nil, nil, err
 	}
 	defer func() {
 		if err != nil {
@@ -52,12 +82,12 @@ func (c *Business) CreateBusinessWithBranch(ctx context.Context, params db.Creat
 		}
 	}()
 
-	txQueries := q.WithTx(tx)
+	txQueries := q.WithTx(tx) 
 
 	// Create the business
 	business, err := txQueries.CreateBusiness(ctx, params)
 	if err != nil {
-		return db.Business{}, db.Branch{}, err
+		return nil, nil, err
 	}
 
 	// Create a default branch for the business
@@ -69,12 +99,20 @@ func (c *Business) CreateBusinessWithBranch(ctx context.Context, params db.Creat
 	fmt.Printf("creating branch %s", branchParams.Name)
 	branch, err := txQueries.CreateBranch(ctx, branchParams)
 	if err != nil {
-		return db.Business{}, db.Branch{}, err
+		return nil, nil, err
 	}
 
-	fmt.Printf("branch created. id %d and name %s", branch.ID, branch.Name)
-
-	return business, branch, nil
+	_, err = txQueries.CreateAuditLog(ctx, db.CreateAuditLogParams{
+		Action:    "Create_Business",
+		ActorID:   int32(claims.UserID),
+		TenantID:  int32(claims.TenantID),
+		IpAddress: ipAddress,
+		UserAgent: userAgent,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	return &business, &branch, nil
 }
 
 func (c *Business) CreateBusiness(ctx context.Context, params db.CreateBusinessParams) (db.Business, error) {
@@ -87,8 +125,44 @@ func (c *Business) GetBusiness(ctx context.Context, args db.GetBusinessParams) (
 }
 
 // UpdateBusiness updates an existing business.
-func (c *Business) UpdateBusiness(ctx context.Context, params db.UpdateBusinessParams) (db.Business, error) {
-	return c.queries.UpdateBusiness(ctx, params)
+func (c *Business) UpdateBusiness(ctx context.Context, params db.UpdateBusinessParams, claims *jwt.Claims, ip, agent string) (*db.Business, error) {
+	q, ok := c.queries.(*db.Queries)
+	if !ok {
+		return nil, nil
+	}
+
+	// Start a transaction
+	tx, err := c.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
+
+	txQueries := q.WithTx(tx)
+
+	business, err := txQueries.UpdateBusiness(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = txQueries.CreateAuditLog(ctx, db.CreateAuditLogParams{
+		Action: "Update_Business",
+		ActorID: int32(claims.UserID),
+		TenantID: int32(claims.TenantID),
+		IpAddress: ip,
+		UserAgent: agent,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &business, nil
 }
 
 // DeleteBusiness deletes a business by its ID.
@@ -104,13 +178,45 @@ func (c *Business) ListBusinesses(ctx context.Context, ownerID int32) ([]db.Busi
 // --------Branch Methods-------- //
 
 // CreateBranch creates a new branch.
-func (c *Business) CreateBranch(ctx context.Context, params db.CreateBranchParams) (db.Branch, error) {
-	return c.queries.CreateBranch(ctx, params)
+func (c *Business) CreateBranch(ctx context.Context, params db.CreateBranchParams, claims *jwt.Claims, ip, agent string) (*db.Branch, error) {
+	q, ok := c.queries.(*db.Queries)
+	if !ok {
+		return nil, nil
+	}
+
+	// Start a transaction
+	tx, err := c.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
+
+	txQueries := q.WithTx(tx)
+	branch, err := txQueries.CreateBranch(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = txQueries.CreateAuditLog(ctx, db.CreateAuditLogParams{ 
+		Action: "Creatw_Branch",
+		ActorID: int32(claims.UserID),
+		TenantID: int32(claims.TenantID),
+		IpAddress: ip,
+		UserAgent: agent,
+	})
+
+	return &branch, nil
 }
 
 // GetBranch retrieves a branch by its ID.
-func (c *Business) GetBranch(ctx context.Context, id int32) (db.Branch, error) {
-	return c.queries.GetBranch(ctx, id)
+func (c *Business) GetBranch(ctx context.Context, args db.GetBranchParams) (db.Branch, error) {
+	return c.queries.GetBranch(ctx, args)
 }
 
 // UpdateBranch updates an existing branch.
@@ -128,8 +234,8 @@ func (c *Business) ListBranches(ctx context.Context, id int32) ([]db.Branch, err
 	return c.queries.ListBranches(ctx, id)
 }
 
-func (c *Business) LogActivity(ctx context.Context, params db.LogActivityParams) (db.ActivityLog, error) {
-	return c.queries.LogActivity(ctx, params)
+func (c *Business) CreateActivityLog(ctx context.Context, params db.CreateActivityLogParams) (db.ActivityLog, error) {
+	return c.queries.CreateActivityLog(ctx, params)
 }
 
 // ------ Suppliers ----

@@ -1,5 +1,5 @@
 -- name: CreateAPIKey :one
-INSERT INTO api_keys (key_name, api_key, api_secret, user_id, allowed_modules, monthly_limit, expires_at)
+INSERT INTO api_keys (key_name, api_key, api_secret, tenant_id, allowed_modules, monthly_limit, expires_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING *;
 
@@ -9,8 +9,8 @@ SELECT * FROM api_keys WHERE api_key = $1;
 -- name: GetAPIKeyByID :one
 SELECT * FROM api_keys WHERE id = $1;
 
--- name: GetAPIKeysByUser :many
-SELECT * FROM api_keys WHERE user_id = $1 ORDER BY created_at DESC;
+-- name: GetAPIKeysByTenant :many
+SELECT * FROM api_keys WHERE tenant_id = $1 ORDER BY created_at DESC;
 
 -- name: UpdateAPIKey :one
 UPDATE api_keys

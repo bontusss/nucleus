@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -20,19 +19,18 @@ type Handler struct {
 	service ServiceInterface
 	config  *config.Config
 	logger  *logging.Logger
-	env     string // remove
 }
 
-func NewHandler(service ServiceInterface, c *config.Config, l *logging.Logger, e string) *Handler {
-	return &Handler{service, c, l, e}
+func NewHandler(service ServiceInterface, c *config.Config, l *logging.Logger) *Handler {
+	return &Handler{service, c, l}
 }
 
 // LoginRequest represents the login request payload
 // @Description Login request payload
 type LoginRequest struct {
-	Username string `json:"username" example:"admin"`                          // Username for authentication (optional if email provided)
-	Email    string `json:"email" example:"admin@hotel.com"`                   // Email for authentication (optional if username provided)
-	Password string `json:"password" binding:"required" example:"password123"` // Password for authentication
+	Email    string `json:"email" binding:"required" example:"admin@hotel.com"` // Email for authentication (optional if username provided)
+	Password string `json:"password" binding:"required" example:"password123"`  // Password for authentication
+	TenantID int32  `json:"tenant_id" binding:"omitempty" example:"1"`
 }
 
 // LoginResponse represents the login response payload
@@ -83,29 +81,25 @@ type InternalServerErrorResponse struct {
 
 type RegisterResponse struct {
 	ID              int32      `json:"id" example:"1"`
-	Username        string     `json:"username" example:"admin"`
 	Email           string     `json:"email" example:"admin@hotel.com"`
-	FirstName       string     `json:"first_name" example:"Admin"`
-	LastName        string     `json:"last_name" example:"Admin"`
+	OrgName         string     `json:"organization" example:"org name"`
 	CreatedAt       *time.Time `json:"created_at,omitempty" example:"2021-01-01T00:00:00Z"`
 	UpdatedAt       *time.Time `json:"updated_at,omitempty" example:"2021-01-01T00:00:00Z"`
 	IsActive        bool       `json:"is_active" example:"true"`
-	RoleID          int32      `json:"role_id" example:"1"`
 	IsEmailVerified bool       `json:"is_email_verified" example:"true"`
 }
 
 // Login godoc
-// @Summary User login
-// @Description Authenticate user with email or username and return JWT token
-// @Tags auth
+// @Summary Tenant login
+// @Tags Tenants
 // @Accept json
 // @Produce json
-// @Param body body LoginRequest true "Login credentials (email or username)"
+// @Param body body LoginRequest true "Login credentials (email)"
 // @Success 200 {object} LoginResponse "Login successful"
 // @Failure 400 {object} BadRequestResponse "Bad request"
 // @Failure 401 {object} UnauthorizedResponse "Unauthorized"
 // @Failure 500 {object} InternalServerErrorResponse "Internal server error"
-// @Router /api/v1/auth/login [post]
+// @Router /api/v1/tenant/login [post]
 func (h *Handler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -113,49 +107,32 @@ func (h *Handler) Login(c *gin.Context) {
 		api.ErrorResponse(c, 400, err.Error())
 		return
 	}
-
-	// Determine which identifier to use (email or username)
-	identifier := req.Email
-	if identifier == "" {
-		identifier = req.Username
-	}
-
-	// Validate that at least one identifier is provided
-	if identifier == "" {
-		api.ErrorResponse(c, 400, "Either email or username must be provided")
-		return
-	}
-
-	ip := utils.GetClientIP(c)
-
-	token, refreshToken, err := h.service.Login(c, identifier, req.Password, ip, c.Request.UserAgent())
-	if err != nil {
-		// log.Printf("login error: %v", err)
-		h.logger.Printf("login error: %v", err)
-		status := http.StatusUnauthorized
-		errorMsg := err.Error()
-		if !errors.Is(err, ErrInvalidCredentials) && !errors.Is(err, ErrUserInactive) {
-			status = http.StatusBadRequest
-		} else if strings.Contains(errorMsg, "temporarily blocked") ||
-			strings.Contains(errorMsg, "Account temporarily locked") ||
-			strings.Contains(errorMsg, "Too many requests") {
-			status = http.StatusTooManyRequests
+	var token, refreshToken string
+	var err error
+	// For tenant login (organization admin)
+	if req.TenantID == 0 {
+		// This is a tenant admin login
+		token, refreshToken, err = h.service.Login(c.Request.Context(), req.Email, req.Password,
+			c.ClientIP(), c.GetHeader("User-Agent"), 0)
+		if err != nil {
+			api.ErrorResponse(c, 401, err.Error())
+			return
 		}
-		api.ErrorResponse(c, status, errorMsg)
-		return
-	}
 
-	// Parse token to get expiry
-	claims, _ := jwt.ParseToken(token, h.config.JWTSecret)
-	expiry := time.Time{}
-	if claims != nil {
-		expiry = claims.ExpiresAt.Time
+		// Return success response...
+	} else {
+		// This is a user login under a specific tenant
+		token, refreshToken, err = h.service.Login(c.Request.Context(), req.Email, req.Password,
+			c.ClientIP(), c.GetHeader("User-Agent"), req.TenantID)
+		if err != nil {
+			api.ErrorResponse(c, 401, err.Error())
+			return
+		}
 	}
 
 	api.SuccessResponse(c, 200, "login successful", LoginResponse{
 		AccessToken:  token,
 		RefreshToken: refreshToken,
-		ExpiredAt:    expiry.Unix(),
 	})
 
 }
@@ -163,7 +140,7 @@ func (h *Handler) Login(c *gin.Context) {
 // Refresh godoc
 // @Summary Refresh JWT token
 // @Description Refresh JWT token using a valid refresh token
-// @Tags auth
+// @Tags Tenants
 // @Accept json
 // @Produce json
 // @Param body body RefreshRequest true "Refresh token request"
@@ -172,47 +149,47 @@ func (h *Handler) Login(c *gin.Context) {
 // @Failure 401 {object} UnauthorizedResponse "Unauthorized"
 // @Failure 500 {object} InternalServerErrorResponse "Internal server error"
 // @Router /api/v1/auth/refresh [post]
-func (h *Handler) Refresh(c *gin.Context) {
-	var req RefreshRequest
-	if err := c.ShouldBindJSON(&req); err != nil || req.RefreshToken == "" {
-		api.ErrorResponse(c, 401, "Missing or invalid refresh token")
-		return
-	}
+// func (h *Handler) Refresh(c *gin.Context) {
+// 	var req RefreshRequest
+// 	if err := c.ShouldBindJSON(&req); err != nil || req.RefreshToken == "" {
+// 		api.ErrorResponse(c, 401, "Missing or invalid refresh token")
+// 		return
+// 	}
 
-	accessToken, refreshToken, err := h.service.RefreshToken(c.Request.Context(), req.RefreshToken)
-	if err != nil {
-		status := http.StatusUnauthorized
-		if !errors.Is(err, ErrInvalidCredentials) && !errors.Is(err, ErrUserInactive) {
-			status = http.StatusInternalServerError
-		}
-		api.ErrorResponse(c, status, err.Error())
-		return
-	}
+// 	accessToken, refreshToken, err := h.service.RefreshToken(c.Request.Context(), req.RefreshToken)
+// 	if err != nil {
+// 		status := http.StatusUnauthorized
+// 		if !errors.Is(err, ErrInvalidCredentials) && !errors.Is(err, ErrUserInactive) {
+// 			status = http.StatusInternalServerError
+// 		}
+// 		api.ErrorResponse(c, status, err.Error())
+// 		return
+// 	}
 
-	claims, _ := jwt.ParseToken(accessToken, h.config.JWTSecret)
-	expiry := time.Time{}
-	if claims != nil {
-		expiry = claims.ExpiresAt.Time
-	}
+// 	claims, _ := jwt.ParseToken(accessToken, h.config.JWTSecret)
+// 	expiry := time.Time{}
+// 	if claims != nil {
+// 		expiry = claims.ExpiresAt.Time
+// 	}
 
-	api.SuccessResponse(c, 200, "message string", RefreshResponse{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-		ExpiresIn:    int(expiry.Unix()),
-	})
-}
+// 	api.SuccessResponse(c, 200, "message string", RefreshResponse{
+// 		AccessToken:  accessToken,
+// 		RefreshToken: refreshToken,
+// 		ExpiresIn:    int(expiry.Unix()),
+// 	})
+// }
 
 // Logout godoc
-// @Summary User logout
-// @Description Logout user and invalidate JWT token
-// @Tags auth
+// @Summary Tenant logout
+// @Description Logout tenant and invalidate JWT token
+// @Tags Tenants
 // @Accept json
 // @Produce json
 // @Success 200 "Logout successful"
 // @Failure 400 {object} BadRequestResponse "Bad request"
 // @Failure 401 {object} UnauthorizedResponse "Unauthorized"
 // @Failure 500 {object} InternalServerErrorResponse "Internal server error"
-// @Router /api/v1/auth/logout [post]
+// @Router /api/v1/tenant/logout [post]
 func (h *Handler) Logout(c *gin.Context) {
 	authHeader := c.GetHeader(AuthorizationHeader)
 	if authHeader == "" {
@@ -245,31 +222,29 @@ func (h *Handler) Logout(c *gin.Context) {
 	api.SuccessResponse(c, 200, "Logged out successfully", nil)
 }
 
-// RegisterAdminRequest represents the login request payload
+// RegisterTenantRequest represents the login request payload
 // @Description Register admin request payload
-type RegisterAdminRequest struct {
-	FirstName string `json:"first_name" binding:"required,min=2"`
-	LastName  string `json:"last_name" binding:"required,min=2"`
-	Username  string `json:"username" binding:"required,min=3"`
-	Email     string `json:"email" binding:"required,email"`
-	Password  string `json:"password" binding:"required,min=8"`
+type RegisterTenantRequest struct {
+	OrgName  string `json:"organization" binding:"required,min=2"`
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required,min=8"`
 }
 
-// Admin Register godoc
-// @Summary Admin Register
-// @Description Create admin with email, username, password and return JWT token
-// @Tags auth
+// Tenant Register godoc
+// @Summary Tenant Register
+// @Description Create tenant with email, password and return JWT token
+// @Tags Tenants
 // @Accept json
 // @Produce json
-// @Param body body RegisterAdminRequest true "Register credentials (email, username and password)"
+// @Param body body RegisterTenantRequest true "Register credentials (email and password)"
 // @Success 200 {object} RegisterResponse "Registration successful"
 // @Failure 400 {object} BadRequestResponse "Bad request"
 // @Failure 401 {object} UnauthorizedResponse "Unauthorized"
 // @Failure 500 {object} InternalServerErrorResponse "Internal server error"
 // @Failure 500 {string} string "Unable to send email at this time, request a new verification code for example@email.com"
-// @Router /api/v1/auth/register [post]
-func (h *Handler) RegisterAdmin(c *gin.Context) {
-	var req RegisterAdminRequest
+// @Router /api/v1/tenant/register [post]
+func (h *Handler) RegisterTenant(c *gin.Context) {
+	var req RegisterTenantRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		api.ErrorResponse(c, 400, err.Error())
 		return
@@ -278,14 +253,14 @@ func (h *Handler) RegisterAdmin(c *gin.Context) {
 	code := utils.GenerateOTP()
 	expiry := time.Now().Add(10 * time.Minute)
 
-	admin, err := h.service.RegisterAdmin(c, req.Username, req.Email, req.Password, req.FirstName, req.LastName)
+	dev, err := h.service.RegisterTenant(c, req.Email, req.Password, req.OrgName)
 	if err != nil {
-		log.Printf("error registering admin: %v", err)
+		log.Printf("error registering dev: %v", err)
 		api.ErrorResponse(c, 500, err.Error())
 		return
 	}
 
-	err = h.service.SetEmailVerification(c.Request.Context(), admin.ID, code, expiry)
+	err = h.service.SetEmailVerification(c.Request.Context(), dev.ID, code, expiry)
 	if err != nil {
 		log.Printf("error saving verification code: %v", err)
 		api.ErrorResponse(c, 500, err.Error())
@@ -294,27 +269,24 @@ func (h *Handler) RegisterAdmin(c *gin.Context) {
 
 	// Send verification email
 	emailBody, _ := utils.RenderEmailTemplate("templates/auth/verify_email.html", map[string]any{
-		"Username": admin.Username,
+		"Username": dev.Organization,
 		"Code":     code,
 	})
 	plunk := utils.Plunk{HttpClient: http.DefaultClient, Config: h.config}
-	err = plunk.SendEmail(admin.Email, "Verify your Herp account", emailBody)
+	err = plunk.SendEmail(dev.Email, "Verify your Herp account", emailBody)
 	if err != nil {
 		log.Printf("error sending verification email: %v", err)
-		api.ErrorResponse(c, 500, fmt.Sprintf("Unable to send email at this time, request a new verification code for %s", admin.Email))
+		api.ErrorResponse(c, 500, fmt.Sprintf("Unable to send email at this time, request a new verification code for %s", dev.Email))
 		return
 	}
 	api.SuccessResponse(c, 200, "Registration successful", RegisterResponse{
-		ID:              admin.ID,
-		Username:        admin.Username,
-		Email:           admin.Email,
-		FirstName:       admin.FirstName,
-		LastName:        admin.LastName,
-		CreatedAt:       &admin.CreatedAt.Time,
-		UpdatedAt:       &admin.UpdatedAt.Time,
-		IsActive:        admin.IsActive,
-		RoleID:          admin.RoleID,
-		IsEmailVerified: admin.EmailVerified,
+		ID:              dev.ID,
+		OrgName:         dev.Organization,
+		Email:           dev.Email,
+		CreatedAt:       &dev.CreatedAt.Time,
+		UpdatedAt:       &dev.UpdatedAt.Time,
+		IsActive:        dev.IsActive,
+		IsEmailVerified: dev.EmailVerified,
 	})
 }
 
@@ -326,9 +298,9 @@ type VerifyEmailRequest struct {
 }
 
 // Verify Email godoc
-// @Summary Verify Admin Email
+// @Summary Verify Tenant Email
 // @Description Verify admin email with email and code
-// @Tags auth
+// @Tags Tenants
 // @Accept json
 // @Produce json
 // @Param body body VerifyEmailRequest true "Verify Email Request"
@@ -336,7 +308,7 @@ type VerifyEmailRequest struct {
 // @Failure 400 {object} BadRequestResponse "Bad request"
 // @Failure 401 {object} UnauthorizedResponse "Unauthorized"
 // @Failure 500 {object} InternalServerErrorResponse "Internal server error"
-// @Router /api/v1/auth/verify-email [post]
+// @Router /api/v1/tenant/verify-email [post]
 func (h *Handler) VerifyEmail(c *gin.Context) {
 	var req VerifyEmailRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -359,7 +331,7 @@ func (h *Handler) VerifyEmail(c *gin.Context) {
 // Forgot Password godoc
 // @Summary Forgot Password
 // @Description Initiate password reset by sending a reset code to the user's email
-// @Tags auth
+// @Tags Tenants
 // @Accept json
 // @Produce json
 // @Param body body ForgotPasswordRequest true "Forgot Password Request"
@@ -367,7 +339,7 @@ func (h *Handler) VerifyEmail(c *gin.Context) {
 // @Failure 400 {object} BadRequestResponse "Bad request"
 // @Failure 404 {object} UnauthorizedResponse "User not found"
 // @Failure 500 {object} InternalServerErrorResponse "Internal server error"
-// @Router /api/v1/auth/forgot-password [post]
+// @Router /api/v1/tenant/forgot-password [post]
 func (h *Handler) ForgotPassword(c *gin.Context) {
 	var req ForgotPasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -396,7 +368,7 @@ func (h *Handler) ForgotPassword(c *gin.Context) {
 // Reset Password godoc
 // @Summary Reset Password
 // @Description Reset password using email, reset code, and new password
-// @Tags auth
+// @Tags Tenants
 // @Accept json
 // @Produce json
 // @Param body body ResetAdminPasswordRequest true "Reset Password Request"
@@ -404,14 +376,14 @@ func (h *Handler) ForgotPassword(c *gin.Context) {
 // @Failure 400 {object} BadRequestResponse "Bad request or invalid code"
 // @Failure 404 {object} UnauthorizedResponse "User not found"
 // @Failure 500 {object} InternalServerErrorResponse "Internal server error"
-// @Router /api/v1/auth/reset-password [post]
+// @Router /api/v1/tenant/reset-password [post]
 func (h *Handler) ResetPassword(c *gin.Context) {
 	var req ResetAdminPasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		api.ErrorResponse(c, 400, err.Error())
 		return
 	}
-	err := h.service.ResetAdminPassword(c.Request.Context(), req.Email, req.Code, req.NewPassword)
+	err := h.service.ResetDeveloperPassword(c.Request.Context(), req.Email, req.Code, req.NewPassword)
 	if err != nil {
 		api.ErrorResponse(c, 400, err.Error())
 		return

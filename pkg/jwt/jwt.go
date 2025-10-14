@@ -15,25 +15,29 @@ const (
 )
 
 type Claims struct {
-	UserID      int       `json:"userId"`
-	Username    string    `json:"username"`
-	Email       string    `json:"email"`
-	Role        string    `json:"role"`
-	Permissions []string  `json:"permissions"`
-	TokenType   TokenType `json:"tokenType"`
+	UserID       int       `json:"userId"`
+	TenantID     int       `json:"tenantId"`
+	Email        string    `json:"email"`
+	Role         string    `json:"role"`
+	UserType     string    `json:"userType"`
+	Organization string    `json:"organization"`
+	Permissions  []string  `json:"permissions"`
+	TokenType    TokenType `json:"tokenType"`
 	jwt.RegisteredClaims
 }
 
-func GenerateToken(userID int, username, email, role, secret string, permissions []string, tokenType TokenType, expiry time.Duration) (string, error) {
+func GenerateToken(userID, tenantID int, email, organization, role, userType string, secret string, permissions []string, tokenType TokenType, expiry time.Duration) (string, error) {
 	expirationTime := time.Now().Add(expiry)
 
 	claims := &Claims{
-		UserID:      userID,
-		Email:       email,
-		Role:        role,
-		Permissions: permissions,
-		Username:    username,
-		TokenType:   tokenType,
+		UserID:       userID,
+		TenantID:     tenantID,
+		Email:        email,
+		Role:         role,
+		UserType:     userType,
+		Organization: organization,
+		Permissions:  permissions,
+		TokenType:    tokenType,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

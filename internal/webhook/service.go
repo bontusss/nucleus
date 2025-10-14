@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/hmac"
-	"crypto/rand"
+	"math/rand"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	db "nucleus/db/sqlc"
 	"time"
 )
@@ -28,7 +29,7 @@ type CreateWebhookParams struct {
 	Description string   `json:"description"`
 	URL         string   `json:"url"`
 	Events      []string `json:"events"`
-	UserID      int      `json:"user_id"`
+	TenantID    int      `json:"tenant_id"`
 	MaxRetries  int      `json:"max_retries"`
 	TimeoutMs   int      `json:"timeout_ms"`
 }
@@ -52,14 +53,22 @@ type WebhookEvent struct {
 	Type      string    `json:"type"`
 	Data      any       `json:"data"`
 	Timestamp time.Time `json:"timestamp"`
-	UserID    int       `json:"user_id,omitempty"`
+	TenantID  int       `json:"tenant_id,omitempty"`
 	Module    string    `json:"module"`
 }
 
 // TriggerEvent sends webhook notifications for an event
 func (s *Service) TriggerEvent(ctx context.Context, event WebhookEvent) error {
+	// require tenant scoping
+	if event.TenantID == 0 {
+		return fmt.Errorf("tenant id required for event %q", event.Type)
+	}
+
 	// Get active webhooks that listen for this event type
-	webhooks, err := s.queries.GetWebhooksByEvent(ctx, []string{event.Type})
+	webhooks, err := s.queries.GetWebhooksByEvent(ctx, db.GetWebhooksByEventParams{
+		TenantID: int32(event.TenantID),
+		Events:   []string{event.Type},
+	})
 	if err != nil {
 		return err
 	}
@@ -78,7 +87,7 @@ func (s *Service) TriggerEvent(ctx context.Context, event WebhookEvent) error {
 
 // sendWebhook delivers a webhook to a specific URL
 func (s *Service) sendWebhook(ctx context.Context, webhook db.Webhook, event WebhookEvent) {
-	payload := map[string]interface{}{
+	payload := map[string]any{
 		"event":      event.Type,
 		"data":       event.Data,
 		"timestamp":  event.Timestamp.Format(time.RFC3339),
@@ -98,7 +107,7 @@ func (s *Service) sendWebhook(ctx context.Context, webhook db.Webhook, event Web
 	}
 
 	client := &http.Client{Timeout: timeout}
-	req, err := http.NewRequest("POST", webhook.Url, bytes.NewReader(payloadBytes))
+	req, err := http.NewRequestWithContext(ctx, "POST", webhook.Url, bytes.NewReader(payloadBytes))
 	if err != nil {
 		s.recordDeliveryFailure(ctx, webhook.ID, event.Type, payload, 0, err.Error(), 1)
 		return
@@ -109,6 +118,7 @@ func (s *Service) sendWebhook(ctx context.Context, webhook db.Webhook, event Web
 	req.Header.Set("User-Agent", "Nucleus-Webhooks/1.0")
 	req.Header.Set("X-Webhook-Event", event.Type)
 	req.Header.Set("X-Webhook-ID", fmt.Sprintf("%d", webhook.ID))
+
 	// Add signature for verification
 	timestamp := time.Now().Format(time.RFC3339)
 	signature := s.generateSignature(webhook.Secret, payloadBytes, timestamp)
@@ -123,8 +133,17 @@ func (s *Service) sendWebhook(ctx context.Context, webhook db.Webhook, event Web
 		AttemptNumber: sql.NullInt32{Int32: 1, Valid: true},
 	})
 	if err != nil {
+		// set error on the original attempt before retry
+		s.queries.UpdateWebhookDelivery(ctx, db.UpdateWebhookDeliveryParams{
+			ID:           delivery.ID,
+			ErrorMessage: sql.NullString{String: err.Error(), Valid: true},
+		})
+		s.handleRetry(ctx, webhook, event, payload, int64(delivery.ID), err.Error(), 1)
 		return
 	}
+	req.Header.Set("X_Webhook-Delivery-ID", fmt.Sprintf("%d", delivery.ID))
+	payload["delivery_id"] = delivery.ID
+	payloadBytes, _ = json.Marshal(payload)
 
 	// Send request
 	resp, err := client.Do(req)
@@ -147,6 +166,10 @@ func (s *Service) sendWebhook(ctx context.Context, webhook db.Webhook, event Web
 
 	// Handle non-2xx responses with retry logic
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		s.queries.UpdateWebhookDelivery(ctx, db.UpdateWebhookDeliveryParams{
+			ID:           delivery.ID,
+			ErrorMessage: sql.NullString{String: fmt.Sprintf("HTTP %d: %s", resp.StatusCode, string(responseBody)), Valid: true},
+		})
 		s.handleRetry(ctx, webhook, event, payload, int64(delivery.ID),
 			fmt.Sprintf("HTTP %d: %s", resp.StatusCode, string(responseBody)), 1)
 	}
@@ -154,9 +177,14 @@ func (s *Service) sendWebhook(ctx context.Context, webhook db.Webhook, event Web
 
 // handleRetry manages webhook delivery retries
 func (s *Service) handleRetry(ctx context.Context, webhook db.Webhook, event WebhookEvent,
-	payload map[string]interface{}, deliveryID int64, errorMsg string, attempt int) {
+	payload map[string]any, deliveryID int64, errorMsg string, attempt int) {
 
-	if attempt >= int(webhook.MaxRetries.Int32) {
+	maxRetries := int(webhook.MaxRetries.Int32)
+	if maxRetries <= 0 {
+		maxRetries = 3
+	}
+
+	if attempt >= maxRetries {
 		// Max retries reached, mark as failed
 		s.queries.UpdateWebhookDelivery(ctx, db.UpdateWebhookDeliveryParams{
 			ID:           int32(deliveryID),
@@ -165,16 +193,22 @@ func (s *Service) handleRetry(ctx context.Context, webhook db.Webhook, event Web
 		return
 	}
 
-	// Schedule retry with exponential backoff
-	backoff := time.Duration(attempt*attempt) * time.Second // Exponential backoff
-	time.AfterFunc(backoff, func() {
+	// capped exponential backoff with jitter
+	base := time.Second * time.Duration(attempt*attempt)
+	if base > 30*time.Second {
+		base = 30 * time.Second
+	}
+	jitter := time.Duration(rand.Int63n(int64(time.Second))) // 0–1s
+	delay := base + jitter
+
+	time.AfterFunc(delay, func() {
 		s.retryWebhook(ctx, webhook, event, payload, deliveryID, attempt+1)
 	})
 }
 
 // retryWebhook attempts to resend a failed webhook
 func (s *Service) retryWebhook(ctx context.Context, webhook db.Webhook, event WebhookEvent,
-	payload map[string]interface{}, originalDeliveryID int64, attempt int) {
+	payload map[string]any, originalDeliveryID int64, attempt int) {
 
 	payloadBytes, _ := json.Marshal(payload)
 
@@ -245,7 +279,7 @@ func (s *Service) VerifySignature(secret, signature, timestamp string, payload [
 
 // Record delivery failure
 func (s *Service) recordDeliveryFailure(ctx context.Context, webhookID int32, eventType string,
-	payload map[string]interface{}, statusCode int, errorMsg string, attempt int) {
+	payload map[string]any, statusCode int, errorMsg string, attempt int) {
 
 	payloadBytes, _ := json.Marshal(payload)
 	s.queries.RecordWebhookDelivery(ctx, db.RecordWebhookDeliveryParams{
@@ -269,13 +303,24 @@ func (s *Service) CreateWebhook(ctx context.Context, params CreateWebhookParams)
 		return nil, err
 	}
 
+	u, err := url.Parse(params.URL)
+	if err != nil || (u.Scheme != "https" && u.Scheme != "http") {
+		return nil, fmt.Errorf("invalid webhook URL")
+	}
+	if params.TimeoutMs <= 0 || params.TimeoutMs > 30000 {
+		params.TimeoutMs = 5000
+	}
+	if params.MaxRetries < 0 || params.MaxRetries > 10 {
+		params.MaxRetries = 3
+	}
+
 	webhook, err := s.queries.CreateWebhook(ctx, db.CreateWebhookParams{
 		Name:        params.Name,
 		Description: sql.NullString{String: params.Description, Valid: params.Description != ""},
 		Url:         params.URL,
 		Secret:      secret,
 		Events:      params.Events,
-		UserID:      int32(params.UserID),
+		TenantID:    int32(params.TenantID),
 		MaxRetries:  sql.NullInt32{Int32: int32(params.MaxRetries), Valid: params.MaxRetries != 0},
 		TimeoutMs:   sql.NullInt32{Int32: int32(params.TimeoutMs), Valid: params.TimeoutMs != 0},
 	})

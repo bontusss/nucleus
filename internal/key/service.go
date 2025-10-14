@@ -8,6 +8,8 @@ import (
 	"errors"
 	db "nucleus/db/sqlc"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 var (
@@ -31,7 +33,7 @@ func NewService(queries *db.Queries) *Service {
 
 type GenerateAPIKeyParams struct {
 	KeyName        string    `json:"keyName"`
-	UserID         int       `json:"userId"`
+	TenantID         int       `json:"tenantId"`
 	AllowedModules []string  `json:"allowedModules"`
 	MonthlyLimit   int       `json:"monthlyLimit"`
 	ExpiresAt      time.Time `json:"expiresAt"`
@@ -87,7 +89,7 @@ func (s *Service) GenerateAPIKey(ctx context.Context, params GenerateAPIKeyParam
 		KeyName:        params.KeyName,
 		ApiKey:         apiKey,
 		ApiSecret:      secret,
-		UserID:         int32(params.UserID),
+		TenantID:         int32(params.TenantID),
 		AllowedModules: params.AllowedModules,
 		MonthlyLimit:   int32(params.MonthlyLimit),
 		ExpiresAt:      params.ExpiresAt,
@@ -206,4 +208,18 @@ func (s *Service) GetMonthlyUsage(ctx context.Context, apiKeyID int) (*MonthlyUs
 		TotalBytes:    totalBytes,
 		Month:         firstOfMonth,
 	}, nil
+}
+
+func GetTenantFromApikey(c *gin.Context) (*db.ApiKey, bool) {
+	key, exists := c.Get("apiKey")
+	if !exists {
+		return nil, false
+	}
+
+	apiKey, ok := key.(*db.ApiKey)
+	if !ok {
+		return nil, false
+	}
+
+	return apiKey, true
 }

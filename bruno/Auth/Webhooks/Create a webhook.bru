@@ -1,0 +1,32 @@
+meta {
+  name: Create a webhook
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseURI}}webhooks
+  body: json
+  auth: apikey
+}
+
+auth:apikey {
+  key: {{var}}
+  value: {{key}}
+  placement: header
+}
+
+body:json {
+  {
+    "name": "My receiver",
+    "description": "Notify on business created",
+    "url": "https://example.com",
+    "events": ["business.created"],
+    "max_retries": 10,
+    "timeout_ms": 1000
+  }
+}
+
+settings {
+  encodeUrl: true
+}

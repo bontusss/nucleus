@@ -14,9 +14,9 @@ import (
 )
 
 const createWebhook = `-- name: CreateWebhook :one
-INSERT INTO webhooks (name, description, url, secret, events, user_id, max_retries, timeout_ms)
+INSERT INTO webhooks (name, description, url, secret, events, tenant_id, max_retries, timeout_ms)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, name, description, url, secret, events, user_id, is_active, retry_count, max_retries, timeout_ms, created_at, updated_at
+RETURNING id, name, description, url, secret, events, tenant_id, is_active, retry_count, max_retries, timeout_ms, created_at, updated_at
 `
 
 type CreateWebhookParams struct {
@@ -25,7 +25,7 @@ type CreateWebhookParams struct {
 	Url         string         `json:"url"`
 	Secret      string         `json:"secret"`
 	Events      []string       `json:"events"`
-	UserID      int32          `json:"user_id"`
+	TenantID    int32          `json:"tenant_id"`
 	MaxRetries  sql.NullInt32  `json:"max_retries"`
 	TimeoutMs   sql.NullInt32  `json:"timeout_ms"`
 }
@@ -37,7 +37,7 @@ func (q *Queries) CreateWebhook(ctx context.Context, arg CreateWebhookParams) (W
 		arg.Url,
 		arg.Secret,
 		pq.Array(arg.Events),
-		arg.UserID,
+		arg.TenantID,
 		arg.MaxRetries,
 		arg.TimeoutMs,
 	)
@@ -49,7 +49,7 @@ func (q *Queries) CreateWebhook(ctx context.Context, arg CreateWebhookParams) (W
 		&i.Url,
 		&i.Secret,
 		pq.Array(&i.Events),
-		&i.UserID,
+		&i.TenantID,
 		&i.IsActive,
 		&i.RetryCount,
 		&i.MaxRetries,
@@ -61,11 +61,16 @@ func (q *Queries) CreateWebhook(ctx context.Context, arg CreateWebhookParams) (W
 }
 
 const deleteWebhook = `-- name: DeleteWebhook :exec
-DELETE FROM webhooks WHERE id = $1
+DELETE FROM webhooks WHERE id = $1 AND tenant_id = $2
 `
 
-func (q *Queries) DeleteWebhook(ctx context.Context, id int32) error {
-	_, err := q.db.ExecContext(ctx, deleteWebhook, id)
+type DeleteWebhookParams struct {
+	ID       int32 `json:"id"`
+	TenantID int32 `json:"tenant_id"`
+}
+
+func (q *Queries) DeleteWebhook(ctx context.Context, arg DeleteWebhookParams) error {
+	_, err := q.db.ExecContext(ctx, deleteWebhook, arg.ID, arg.TenantID)
 	return err
 }
 
@@ -105,7 +110,7 @@ func (q *Queries) GetDeliveryStats(ctx context.Context, arg GetDeliveryStatsPara
 }
 
 const getWebhookByID = `-- name: GetWebhookByID :one
-SELECT id, name, description, url, secret, events, user_id, is_active, retry_count, max_retries, timeout_ms, created_at, updated_at FROM webhooks WHERE id = $1
+SELECT id, name, description, url, secret, events, tenant_id, is_active, retry_count, max_retries, timeout_ms, created_at, updated_at FROM webhooks WHERE id = $1
 `
 
 func (q *Queries) GetWebhookByID(ctx context.Context, id int32) (Webhook, error) {
@@ -118,7 +123,7 @@ func (q *Queries) GetWebhookByID(ctx context.Context, id int32) (Webhook, error)
 		&i.Url,
 		&i.Secret,
 		pq.Array(&i.Events),
-		&i.UserID,
+		&i.TenantID,
 		&i.IsActive,
 		&i.RetryCount,
 		&i.MaxRetries,
@@ -228,13 +233,18 @@ func (q *Queries) GetWebhookEvents(ctx context.Context) ([]WebhookEvent, error) 
 }
 
 const getWebhooksByEvent = `-- name: GetWebhooksByEvent :many
-SELECT id, name, description, url, secret, events, user_id, is_active, retry_count, max_retries, timeout_ms, created_at, updated_at FROM webhooks
-WHERE $1 = ANY(events) AND is_active = true
+SELECT id, name, description, url, secret, events, tenant_id, is_active, retry_count, max_retries, timeout_ms, created_at, updated_at FROM webhooks
+WHERE tenant_id = $1 AND $2 = ANY(events) AND is_active = true
 ORDER BY created_at DESC
 `
 
-func (q *Queries) GetWebhooksByEvent(ctx context.Context, events []string) ([]Webhook, error) {
-	rows, err := q.db.QueryContext(ctx, getWebhooksByEvent, pq.Array(events))
+type GetWebhooksByEventParams struct {
+	TenantID int32    `json:"tenant_id"`
+	Events   []string `json:"events"`
+}
+
+func (q *Queries) GetWebhooksByEvent(ctx context.Context, arg GetWebhooksByEventParams) ([]Webhook, error) {
+	rows, err := q.db.QueryContext(ctx, getWebhooksByEvent, arg.TenantID, pq.Array(arg.Events))
 	if err != nil {
 		return nil, err
 	}
@@ -249,7 +259,7 @@ func (q *Queries) GetWebhooksByEvent(ctx context.Context, events []string) ([]We
 			&i.Url,
 			&i.Secret,
 			pq.Array(&i.Events),
-			&i.UserID,
+			&i.TenantID,
 			&i.IsActive,
 			&i.RetryCount,
 			&i.MaxRetries,
@@ -271,11 +281,11 @@ func (q *Queries) GetWebhooksByEvent(ctx context.Context, events []string) ([]We
 }
 
 const getWebhooksByUser = `-- name: GetWebhooksByUser :many
-SELECT id, name, description, url, secret, events, user_id, is_active, retry_count, max_retries, timeout_ms, created_at, updated_at FROM webhooks WHERE user_id = $1 ORDER BY created_at DESC
+SELECT id, name, description, url, secret, events, tenant_id, is_active, retry_count, max_retries, timeout_ms, created_at, updated_at FROM webhooks WHERE tenant_id = $1 ORDER BY created_at DESC
 `
 
-func (q *Queries) GetWebhooksByUser(ctx context.Context, userID int32) ([]Webhook, error) {
-	rows, err := q.db.QueryContext(ctx, getWebhooksByUser, userID)
+func (q *Queries) GetWebhooksByUser(ctx context.Context, tenantID int32) ([]Webhook, error) {
+	rows, err := q.db.QueryContext(ctx, getWebhooksByUser, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -290,7 +300,7 @@ func (q *Queries) GetWebhooksByUser(ctx context.Context, userID int32) ([]Webhoo
 			&i.Url,
 			&i.Secret,
 			pq.Array(&i.Events),
-			&i.UserID,
+			&i.TenantID,
 			&i.IsActive,
 			&i.RetryCount,
 			&i.MaxRetries,
@@ -351,8 +361,8 @@ const updateWebhook = `-- name: UpdateWebhook :one
 UPDATE webhooks
 SET name = $2, description = $3, url = $4, events = $5, is_active = $6,
     max_retries = $7, timeout_ms = $8, updated_at = CURRENT_TIMESTAMP
-WHERE id = $1
-RETURNING id, name, description, url, secret, events, user_id, is_active, retry_count, max_retries, timeout_ms, created_at, updated_at
+WHERE id = $1 AND tenant_id = $2
+RETURNING id, name, description, url, secret, events, tenant_id, is_active, retry_count, max_retries, timeout_ms, created_at, updated_at
 `
 
 type UpdateWebhookParams struct {
@@ -385,7 +395,7 @@ func (q *Queries) UpdateWebhook(ctx context.Context, arg UpdateWebhookParams) (W
 		&i.Url,
 		&i.Secret,
 		pq.Array(&i.Events),
-		&i.UserID,
+		&i.TenantID,
 		&i.IsActive,
 		&i.RetryCount,
 		&i.MaxRetries,

@@ -3,6 +3,8 @@ package webhook
 import (
 	"net/http"
 	db "nucleus/db/sqlc"
+	"nucleus/internal/core/api"
+	"nucleus/internal/key"
 	"nucleus/pkg/jwt"
 	"strconv"
 	"time"
@@ -18,13 +20,27 @@ func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
+func (h *Handler) RegisterRoutes(r *gin.RouterGroup, apiKeySvc *key.Service) {
+	webhooks := r.Group("/webhooks")
+	webhooks.Use(key.APIKeyMiddleware(apiKeySvc, "webhook"))
+	{
+		webhooks.POST("", h.CreateWebhook)
+		webhooks.GET("", h.ListWebhooks)
+		webhooks.GET("/:id", h.GetWebhook)
+		webhooks.PATCH("/:id", h.UpdateWebhook)
+		webhooks.POST("/:id/test", h.TestWebhook)
+		webhooks.POST("/:id/deliveries", h.GetWebhookDeliveries)
+		webhooks.GET("/events/available", h.GetAvailableEvents)
+	}
+}
+
 type CreateWebhookRequest struct {
 	Name        string   `json:"name" binding:"required"`
 	Description string   `json:"description"`
 	URL         string   `json:"url" binding:"required,url"`
 	Events      []string `json:"events" binding:"required"`
-	MaxRetries  int      `json:"max_retries" binding:"min=0,max=10"`
-	TimeoutMs   int      `json:"timeout_ms" binding:"min=1000,max=30000"`
+	MaxRetries  int      `json:"max_retries" binding:"omitempty,min=0,max=10"`
+	TimeoutMs   int      `json:"timeout_ms" binding:"omitempty,min=1000,max=30000"`
 }
 
 type TestWebhookRequest struct {
@@ -39,13 +55,12 @@ func (h *Handler) CreateWebhook(c *gin.Context) {
 		return
 	}
 
-	// Get user ID from context
-	claims, exists := c.Get("claims")
+	t, exists := key.GetTenantFromApikey(c)
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		api.ErrorResponse(c, 401, "error getting tenant details from apikey")
 		return
 	}
-	userID := claims.(*jwt.Claims).UserID
+
 
 	// Set defaults
 	if req.MaxRetries == 0 {
@@ -59,7 +74,7 @@ func (h *Handler) CreateWebhook(c *gin.Context) {
 		Description: req.Description,
 		URL:         req.URL,
 		Events:      req.Events,
-		UserID:      userID,
+		TenantID:    int(t.TenantID),
 		MaxRetries:  req.MaxRetries,
 		TimeoutMs:   req.TimeoutMs,
 	})
@@ -96,19 +111,18 @@ func (h *Handler) GetWebhook(c *gin.Context) {
 	}
 
 	// Verify ownership
-	claims, exists := c.Get("claims")
+	t, exists := key.GetTenantFromApikey(c)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
-	userID := claims.(*jwt.Claims).UserID
 
 	webhook, err := h.service.queries.GetWebhookByID(c.Request.Context(), int32(webhookID))
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Webhook not found"})
 		return
 	}
-	if webhook.UserID != int32(userID) {
+	if webhook.TenantID != int32(t.TenantID) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
@@ -138,12 +152,11 @@ func (h *Handler) UpdateWebhook(c *gin.Context) {
 		return
 	}
 	// Verify ownership
-	claims, exists := c.Get("claims")
+	t, exists := key.GetTenantFromApikey(c)
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
 		return
 	}
-	userID := claims.(*jwt.Claims).UserID
 
 	webhook, err := h.service.queries.GetWebhookByID(c.Request.Context(), int32(webhookID))
 	if err != nil {
@@ -151,7 +164,7 @@ func (h *Handler) UpdateWebhook(c *gin.Context) {
 		return
 	}
 
-	if webhook.UserID != int32(userID) {
+	if webhook.TenantID != int32(t.TenantID) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
@@ -221,12 +234,11 @@ func (h *Handler) TestWebhook(c *gin.Context) {
 	}
 
 	// Verify ownership
-	claims, exists := c.Get("claims")
+	t, exists := key.GetTenantFromApikey(c)
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		api.ErrorResponse(c, 401, "error getting tenant details from apikey")
 		return
 	}
-	userID := claims.(*jwt.Claims).UserID
 
 	webhook, err := h.service.queries.GetWebhookByID(c.Request.Context(), int32(webhookID))
 	if err != nil {
@@ -234,7 +246,7 @@ func (h *Handler) TestWebhook(c *gin.Context) {
 		return
 	}
 
-	if webhook.UserID != int32(userID) {
+	if webhook.TenantID != int32(t.TenantID) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
@@ -244,14 +256,14 @@ func (h *Handler) TestWebhook(c *gin.Context) {
 		Type:      req.EventType,
 		Data:      req.TestData,
 		Timestamp: time.Now(),
-		UserID:    userID,
+		TenantID:    int(t.TenantID),
 		Module:    "test",
 	}
 
 	// Send test webhook (synchronously for testing)
 	go h.service.sendWebhook(c.Request.Context(), webhook, testEvent)
 
-	c.JSON(http.StatusOK, gin.H{"message": "Test webhook sent"})
+	api.SuccessResponse(c, 200, "test webhook sent", testEvent)
 }
 
 func (h *Handler) GetWebhookDeliveries(c *gin.Context) {
@@ -267,12 +279,11 @@ func (h *Handler) GetWebhookDeliveries(c *gin.Context) {
 	}
 
 	// Verify ownership
-	claims, exists := c.Get("claims")
+	t, exists := key.GetTenantFromApikey(c)
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		api.ErrorResponse(c, 401, "invalid apikey")
 		return
 	}
-	userID := claims.(*jwt.Claims).UserID
 
 	webhook, err := h.service.queries.GetWebhookByID(c.Request.Context(), int32(webhookID))
 	if err != nil {
@@ -280,7 +291,7 @@ func (h *Handler) GetWebhookDeliveries(c *gin.Context) {
 		return
 	}
 
-	if webhook.UserID != int32(userID) {
+	if webhook.TenantID != int32(t.TenantID) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}

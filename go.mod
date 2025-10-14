@@ -19,7 +19,10 @@ require (
 
 require github.com/sqlc-dev/pqtype v0.3.0
 
-require github.com/jackc/pgx/v5 v5.7.6 // indirect
+require (
+	github.com/kr/pretty v0.3.0 // indirect
+	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
+)
 
 require (
 	github.com/KyleBanks/depth v1.2.1 // indirect

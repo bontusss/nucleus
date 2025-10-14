@@ -1,19 +1,20 @@
 meta {
-  name: Login
+  name: Tenant Login
   type: http
   seq: 1
 }
 
 post {
-  url: {{baseURI}}auth/login
+  url: {{baseURI}}tenant/login
   body: json
   auth: inherit
 }
 
 body:json {
   {
-    "username": "admin",
-    "password": "password"
+    "email": "ikwecheghu@gmail.com",
+    "password": "password",
+    "tenant_id": 1
   }
 }
 

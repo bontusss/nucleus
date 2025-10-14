@@ -10,205 +10,188 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/sqlc-dev/pqtype"
+	"github.com/lib/pq"
 )
 
 const addPermissionToRole = `-- name: AddPermissionToRole :exec
-INSERT INTO role_permissions (role_id, permission_id)
-VALUES ($1, $2)
+INSERT INTO role_permissions (role_id, permission_id, business_id)
+VALUES ($1, $2, $3)
+ON CONFLICT (role_id, permission_id) DO NOTHING
 `
 
 type AddPermissionToRoleParams struct {
-	RoleID       int32 `json:"role_id"`
-	PermissionID int32 `json:"permission_id"`
+	RoleID       int32         `json:"role_id"`
+	PermissionID int32         `json:"permission_id"`
+	BusinessID   sql.NullInt32 `json:"business_id"`
 }
 
 func (q *Queries) AddPermissionToRole(ctx context.Context, arg AddPermissionToRoleParams) error {
-	_, err := q.db.ExecContext(ctx, addPermissionToRole, arg.RoleID, arg.PermissionID)
+	_, err := q.db.ExecContext(ctx, addPermissionToRole, arg.RoleID, arg.PermissionID, arg.BusinessID)
 	return err
 }
 
-const cleanExpiredRefreshTokens = `-- name: CleanExpiredRefreshTokens :exec
-DELETE FROM refresh_tokens
-WHERE expires_at <= NOW() OR revoked = TRUE
-`
-
-func (q *Queries) CleanExpiredRefreshTokens(ctx context.Context) error {
-	_, err := q.db.ExecContext(ctx, cleanExpiredRefreshTokens)
-	return err
-}
-
-const clearAdminResetCode = `-- name: ClearAdminResetCode :exec
-UPDATE admins
+const clearTenantResetCode = `-- name: ClearTenantResetCode :exec
+UPDATE tenants
 SET reset_code = NULL,
     reset_code_expires_at = NULL,
     updated_at = NOW()
 WHERE id = $1
 `
 
-func (q *Queries) ClearAdminResetCode(ctx context.Context, id int32) error {
-	_, err := q.db.ExecContext(ctx, clearAdminResetCode, id)
+func (q *Queries) ClearTenantResetCode(ctx context.Context, id int32) error {
+	_, err := q.db.ExecContext(ctx, clearTenantResetCode, id)
 	return err
 }
 
-const createAdmin = `-- name: CreateAdmin :one
-INSERT INTO admins (username, email, first_name, last_name, password_hash, role_id, is_active)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, first_name, last_name, username, email, password_hash, role_id, is_active, email_verified, verification_code, verification_expires_at, reset_code, reset_code_expires_at, created_at, updated_at
+const createActivityLog = `-- name: CreateActivityLog :one
+
+INSERT INTO activity_logs (
+    business_id, user_id, action, details, entity_id, entity_type, ip_address, user_agent, metadata
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9, '{}')
+)
+RETURNING id, business_id, user_id, action, details, entity_id, entity_type, ip_address, user_agent, metadata, created_at
 `
 
-type CreateAdminParams struct {
-	Username     string `json:"username"`
-	Email        string `json:"email"`
-	FirstName    string `json:"first_name"`
-	LastName     string `json:"last_name"`
-	PasswordHash string `json:"password_hash"`
-	RoleID       int32  `json:"role_id"`
-	IsActive     bool   `json:"is_active"`
+type CreateActivityLogParams struct {
+	BusinessID int32          `json:"business_id"`
+	UserID     int32          `json:"user_id"`
+	Action     string         `json:"action"`
+	Details    string         `json:"details"`
+	EntityID   int32          `json:"entity_id"`
+	EntityType string         `json:"entity_type"`
+	IpAddress  sql.NullString `json:"ip_address"`
+	UserAgent  sql.NullString `json:"user_agent"`
+	Column9    interface{}    `json:"column_9"`
 }
 
-func (q *Queries) CreateAdmin(ctx context.Context, arg CreateAdminParams) (Admin, error) {
-	row := q.db.QueryRowContext(ctx, createAdmin,
-		arg.Username,
-		arg.Email,
-		arg.FirstName,
-		arg.LastName,
-		arg.PasswordHash,
-		arg.RoleID,
-		arg.IsActive,
+// ACTIVITY LOGS
+func (q *Queries) CreateActivityLog(ctx context.Context, arg CreateActivityLogParams) (ActivityLog, error) {
+	row := q.db.QueryRowContext(ctx, createActivityLog,
+		arg.BusinessID,
+		arg.UserID,
+		arg.Action,
+		arg.Details,
+		arg.EntityID,
+		arg.EntityType,
+		arg.IpAddress,
+		arg.UserAgent,
+		arg.Column9,
 	)
-	var i Admin
+	var i ActivityLog
 	err := row.Scan(
 		&i.ID,
-		&i.FirstName,
-		&i.LastName,
-		&i.Username,
-		&i.Email,
-		&i.PasswordHash,
-		&i.RoleID,
-		&i.IsActive,
-		&i.EmailVerified,
-		&i.VerificationCode,
-		&i.VerificationExpiresAt,
-		&i.ResetCode,
-		&i.ResetCodeExpiresAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const createPasswordResetToken = `-- name: CreatePasswordResetToken :one
-INSERT INTO password_reset_tokens (user_id, token, expires_at)
-VALUES ($1, $2, $3)
-RETURNING id, user_id, token, expires_at, used
-`
-
-type CreatePasswordResetTokenParams struct {
-	UserID    int32     `json:"user_id"`
-	Token     string    `json:"token"`
-	ExpiresAt time.Time `json:"expires_at"`
-}
-
-func (q *Queries) CreatePasswordResetToken(ctx context.Context, arg CreatePasswordResetTokenParams) (PasswordResetToken, error) {
-	row := q.db.QueryRowContext(ctx, createPasswordResetToken, arg.UserID, arg.Token, arg.ExpiresAt)
-	var i PasswordResetToken
-	err := row.Scan(
-		&i.ID,
+		&i.BusinessID,
 		&i.UserID,
-		&i.Token,
-		&i.ExpiresAt,
-		&i.Used,
-	)
-	return i, err
-}
-
-const createRefreshToken = `-- name: CreateRefreshToken :one
-INSERT INTO refresh_tokens (user_id, token, expires_at)
-VALUES ($1, $2, $3)
-RETURNING id, user_id, token, expires_at, revoked, created_at, updated_at
-`
-
-type CreateRefreshTokenParams struct {
-	UserID    int32     `json:"user_id"`
-	Token     string    `json:"token"`
-	ExpiresAt time.Time `json:"expires_at"`
-}
-
-func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error) {
-	row := q.db.QueryRowContext(ctx, createRefreshToken, arg.UserID, arg.Token, arg.ExpiresAt)
-	var i RefreshToken
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.Token,
-		&i.ExpiresAt,
-		&i.Revoked,
+		&i.Action,
+		&i.Details,
+		&i.EntityID,
+		&i.EntityType,
+		&i.IpAddress,
+		&i.UserAgent,
+		&i.Metadata,
 		&i.CreatedAt,
-		&i.UpdatedAt,
 	)
 	return i, err
 }
 
-const createRole = `-- name: CreateRole :one
-INSERT INTO roles (name, description)
-VALUES ($1, $2)
-RETURNING id, name, description
+const createBusinessRole = `-- name: CreateBusinessRole :one
+INSERT INTO business_roles (business_id, name, description)
+VALUES ($1, $2, $3)
+RETURNING id, business_id, name, description, created_at, updated_at
 `
 
-type CreateRoleParams struct {
+type CreateBusinessRoleParams struct {
+	BusinessID  sql.NullInt32  `json:"business_id"`
 	Name        string         `json:"name"`
 	Description sql.NullString `json:"description"`
 }
 
-func (q *Queries) CreateRole(ctx context.Context, arg CreateRoleParams) (Role, error) {
-	row := q.db.QueryRowContext(ctx, createRole, arg.Name, arg.Description)
-	var i Role
-	err := row.Scan(&i.ID, &i.Name, &i.Description)
+func (q *Queries) CreateBusinessRole(ctx context.Context, arg CreateBusinessRoleParams) (BusinessRole, error) {
+	row := q.db.QueryRowContext(ctx, createBusinessRole, arg.BusinessID, arg.Name, arg.Description)
+	var i BusinessRole
+	err := row.Scan(
+		&i.ID,
+		&i.BusinessID,
+		&i.Name,
+		&i.Description,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
 	return i, err
 }
 
-const createUser = `-- name: CreateUser :one
-INSERT INTO users (username, first_name, last_name, email, password_hash, gender, role_id, is_active, metadata)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-RETURNING id, username, first_name, last_name, email, password_hash, gender, role_id, is_active, metadata, created_at, updated_at
+const createLegacyPermission = `-- name: CreateLegacyPermission :one
+INSERT INTO permissions (code, description)
+VALUES ($1, $2)
+RETURNING id, code, description, module, action, resource, scope, is_active, created_at
 `
 
-type CreateUserParams struct {
-	Username     string                `json:"username"`
-	FirstName    string                `json:"first_name"`
-	LastName     string                `json:"last_name"`
-	Email        sql.NullString        `json:"email"`
-	PasswordHash string                `json:"password_hash"`
-	Gender       sql.NullString        `json:"gender"`
-	RoleID       sql.NullInt32         `json:"role_id"`
-	IsActive     sql.NullBool          `json:"is_active"`
-	Metadata     pqtype.NullRawMessage `json:"metadata"`
+type CreateLegacyPermissionParams struct {
+	Code        string         `json:"code"`
+	Description sql.NullString `json:"description"`
 }
 
-func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
-	row := q.db.QueryRowContext(ctx, createUser,
-		arg.Username,
-		arg.FirstName,
-		arg.LastName,
+// Legacy permission creation for compatibility
+func (q *Queries) CreateLegacyPermission(ctx context.Context, arg CreateLegacyPermissionParams) (Permission, error) {
+	row := q.db.QueryRowContext(ctx, createLegacyPermission, arg.Code, arg.Description)
+	var i Permission
+	err := row.Scan(
+		&i.ID,
+		&i.Code,
+		&i.Description,
+		&i.Module,
+		&i.Action,
+		&i.Resource,
+		&i.Scope,
+		&i.IsActive,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const createLegacyUser = `-- name: CreateLegacyUser :one
+INSERT INTO users(email, business_id, tenants_id, branch_id, password_hash, is_active)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id, business_id, tenants_id, branch_id, email, password_hash, first_name, last_name, phone, avatar_url, is_active, last_login_at, email_verified, verification_code, verification_expires_at, metadata, created_at, updated_at
+`
+
+type CreateLegacyUserParams struct {
+	Email        string        `json:"email"`
+	BusinessID   sql.NullInt32 `json:"business_id"`
+	TenantsID    int32         `json:"tenants_id"`
+	BranchID     sql.NullInt32 `json:"branch_id"`
+	PasswordHash string        `json:"password_hash"`
+	IsActive     bool          `json:"is_active"`
+}
+
+// Legacy user creation for compatibility
+func (q *Queries) CreateLegacyUser(ctx context.Context, arg CreateLegacyUserParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, createLegacyUser,
 		arg.Email,
+		arg.BusinessID,
+		arg.TenantsID,
+		arg.BranchID,
 		arg.PasswordHash,
-		arg.Gender,
-		arg.RoleID,
 		arg.IsActive,
-		arg.Metadata,
 	)
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.Username,
-		&i.FirstName,
-		&i.LastName,
+		&i.BusinessID,
+		&i.TenantsID,
+		&i.BranchID,
 		&i.Email,
 		&i.PasswordHash,
-		&i.Gender,
-		&i.RoleID,
+		&i.FirstName,
+		&i.LastName,
+		&i.Phone,
+		&i.AvatarUrl,
 		&i.IsActive,
+		&i.LastLoginAt,
+		&i.EmailVerified,
+		&i.VerificationCode,
+		&i.VerificationExpiresAt,
 		&i.Metadata,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -216,209 +199,219 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	return i, err
 }
 
-const deleteAdmin = `-- name: DeleteAdmin :exec
-DELETE FROM users WHERE id = $1
+const createPasswordResetToken = `-- name: CreatePasswordResetToken :one
+INSERT INTO password_reset_tokens (developer_id, token, expires_at)
+VALUES ($1, $2, $3)
+RETURNING id, developer_id, token, expires_at, used
 `
 
-func (q *Queries) DeleteAdmin(ctx context.Context, id int32) error {
-	_, err := q.db.ExecContext(ctx, deleteAdmin, id)
+type CreatePasswordResetTokenParams struct {
+	DeveloperID int32     `json:"developer_id"`
+	Token       string    `json:"token"`
+	ExpiresAt   time.Time `json:"expires_at"`
+}
+
+func (q *Queries) CreatePasswordResetToken(ctx context.Context, arg CreatePasswordResetTokenParams) (PasswordResetToken, error) {
+	row := q.db.QueryRowContext(ctx, createPasswordResetToken, arg.DeveloperID, arg.Token, arg.ExpiresAt)
+	var i PasswordResetToken
+	err := row.Scan(
+		&i.ID,
+		&i.DeveloperID,
+		&i.Token,
+		&i.ExpiresAt,
+		&i.Used,
+	)
+	return i, err
+}
+
+const createTenant = `-- name: CreateTenant :one
+INSERT INTO tenants (email, password_hash, is_active, organization, plan)
+VALUES ($1, $2, true, $3, $4)
+RETURNING id, organization, email, password_hash, is_active, plan, email_verified, verification_code, verification_expires_at, reset_code, reset_code_expires_at, created_at, updated_at
+`
+
+type CreateTenantParams struct {
+	Email        string `json:"email"`
+	PasswordHash string `json:"password_hash"`
+	Organization string `json:"organization"`
+	Plan         string `json:"plan"`
+}
+
+func (q *Queries) CreateTenant(ctx context.Context, arg CreateTenantParams) (Tenant, error) {
+	row := q.db.QueryRowContext(ctx, createTenant,
+		arg.Email,
+		arg.PasswordHash,
+		arg.Organization,
+		arg.Plan,
+	)
+	var i Tenant
+	err := row.Scan(
+		&i.ID,
+		&i.Organization,
+		&i.Email,
+		&i.PasswordHash,
+		&i.IsActive,
+		&i.Plan,
+		&i.EmailVerified,
+		&i.VerificationCode,
+		&i.VerificationExpiresAt,
+		&i.ResetCode,
+		&i.ResetCodeExpiresAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const deleteActivityLog = `-- name: DeleteActivityLog :exec
+DELETE FROM activity_logs
+WHERE id = $1
+  AND business_id = $2
+`
+
+type DeleteActivityLogParams struct {
+	ID         int32 `json:"id"`
+	BusinessID int32 `json:"business_id"`
+}
+
+func (q *Queries) DeleteActivityLog(ctx context.Context, arg DeleteActivityLogParams) error {
+	_, err := q.db.ExecContext(ctx, deleteActivityLog, arg.ID, arg.BusinessID)
 	return err
 }
 
-const deleteRole = `-- name: DeleteRole :exec
-DELETE FROM roles WHERE id = $1
+const deleteActivityLogs = `-- name: DeleteActivityLogs :exec
+DELETE FROM activity_logs
+WHERE business_id = $1
+  AND id = ANY($2::int[])
 `
 
-func (q *Queries) DeleteRole(ctx context.Context, id int32) error {
-	_, err := q.db.ExecContext(ctx, deleteRole, id)
+type DeleteActivityLogsParams struct {
+	BusinessID int32   `json:"business_id"`
+	Column2    []int32 `json:"column_2"`
+}
+
+func (q *Queries) DeleteActivityLogs(ctx context.Context, arg DeleteActivityLogsParams) error {
+	_, err := q.db.ExecContext(ctx, deleteActivityLogs, arg.BusinessID, pq.Array(arg.Column2))
 	return err
 }
 
-const deleteUser = `-- name: DeleteUser :exec
-DELETE FROM users WHERE id = $1
+const deleteBusinessRole = `-- name: DeleteBusinessRole :exec
+DELETE FROM business_roles
+WHERE id = $1
 `
 
-func (q *Queries) DeleteUser(ctx context.Context, id int32) error {
-	_, err := q.db.ExecContext(ctx, deleteUser, id)
+func (q *Queries) DeleteBusinessRole(ctx context.Context, id int32) error {
+	_, err := q.db.ExecContext(ctx, deleteBusinessRole, id)
 	return err
 }
 
-const getActivityLogs = `-- name: GetActivityLogs :many
-SELECT id, user_id, action, details, entity_id, entity_type, ip_address, user_agent, metadata, created_at FROM activity_logs
-ORDER BY created_at DESC
-LIMIT $1
+const getActivityLog = `-- name: GetActivityLog :one
+SELECT id, business_id, user_id, action, details, entity_id, entity_type, ip_address, user_agent, metadata, created_at FROM activity_logs
+WHERE id = $1
+  AND business_id = $2
+LIMIT 1
 `
 
-func (q *Queries) GetActivityLogs(ctx context.Context, limit int32) ([]ActivityLog, error) {
-	rows, err := q.db.QueryContext(ctx, getActivityLogs, limit)
+type GetActivityLogParams struct {
+	ID         int32 `json:"id"`
+	BusinessID int32 `json:"business_id"`
+}
+
+func (q *Queries) GetActivityLog(ctx context.Context, arg GetActivityLogParams) (ActivityLog, error) {
+	row := q.db.QueryRowContext(ctx, getActivityLog, arg.ID, arg.BusinessID)
+	var i ActivityLog
+	err := row.Scan(
+		&i.ID,
+		&i.BusinessID,
+		&i.UserID,
+		&i.Action,
+		&i.Details,
+		&i.EntityID,
+		&i.EntityType,
+		&i.IpAddress,
+		&i.UserAgent,
+		&i.Metadata,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getBusinessRoleByName = `-- name: GetBusinessRoleByName :one
+SELECT id, business_id, name, description, created_at, updated_at FROM business_roles
+WHERE business_id = $1 AND name = $2
+`
+
+type GetBusinessRoleByNameParams struct {
+	BusinessID sql.NullInt32 `json:"business_id"`
+	Name       string        `json:"name"`
+}
+
+func (q *Queries) GetBusinessRoleByName(ctx context.Context, arg GetBusinessRoleByNameParams) (BusinessRole, error) {
+	row := q.db.QueryRowContext(ctx, getBusinessRoleByName, arg.BusinessID, arg.Name)
+	var i BusinessRole
+	err := row.Scan(
+		&i.ID,
+		&i.BusinessID,
+		&i.Name,
+		&i.Description,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getLegacyPermissionByCode = `-- name: GetLegacyPermissionByCode :one
+SELECT id, code, description, module, action, resource, scope, is_active, created_at FROM permissions
+WHERE code = $1
+`
+
+func (q *Queries) GetLegacyPermissionByCode(ctx context.Context, code string) (Permission, error) {
+	row := q.db.QueryRowContext(ctx, getLegacyPermissionByCode, code)
+	var i Permission
+	err := row.Scan(
+		&i.ID,
+		&i.Code,
+		&i.Description,
+		&i.Module,
+		&i.Action,
+		&i.Resource,
+		&i.Scope,
+		&i.IsActive,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getLegacyRolePermissions = `-- name: GetLegacyRolePermissions :many
+SELECT p.id, p.code, p.description, p.module, p.action, p.resource, p.scope, p.is_active, p.created_at FROM permissions p
+JOIN role_permissions rp ON p.id = rp.permission_id
+WHERE rp.role_id = $1
+ORDER BY p.code
+`
+
+func (q *Queries) GetLegacyRolePermissions(ctx context.Context, roleID int32) ([]Permission, error) {
+	rows, err := q.db.QueryContext(ctx, getLegacyRolePermissions, roleID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []ActivityLog{}
+	items := []Permission{}
 	for rows.Next() {
-		var i ActivityLog
+		var i Permission
 		if err := rows.Scan(
 			&i.ID,
-			&i.UserID,
+			&i.Code,
+			&i.Description,
+			&i.Module,
 			&i.Action,
-			&i.Details,
-			&i.EntityID,
-			&i.EntityType,
-			&i.IpAddress,
-			&i.UserAgent,
-			&i.Metadata,
+			&i.Resource,
+			&i.Scope,
+			&i.IsActive,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getAdminByEmail = `-- name: GetAdminByEmail :one
-SELECT
-    a.id,
-    a.username,
-    a.first_name,
-    a.last_name,
-    a.email,
-    a.password_hash,
-    a.is_active,
-    a.email_verified,
-    a.verification_code,
-    a.verification_expires_at,
-    a.reset_code,
-    a.reset_code_expires_at,
-    r.name as role_name
-FROM admins a
-JOIN roles r ON a.role_id = r.id
-WHERE a.email = $1 LIMIT 1
-`
-
-type GetAdminByEmailRow struct {
-	ID                    int32          `json:"id"`
-	Username              string         `json:"username"`
-	FirstName             string         `json:"first_name"`
-	LastName              string         `json:"last_name"`
-	Email                 string         `json:"email"`
-	PasswordHash          string         `json:"password_hash"`
-	IsActive              bool           `json:"is_active"`
-	EmailVerified         bool           `json:"email_verified"`
-	VerificationCode      sql.NullString `json:"verification_code"`
-	VerificationExpiresAt sql.NullTime   `json:"verification_expires_at"`
-	ResetCode             sql.NullString `json:"reset_code"`
-	ResetCodeExpiresAt    sql.NullTime   `json:"reset_code_expires_at"`
-	RoleName              string         `json:"role_name"`
-}
-
-func (q *Queries) GetAdminByEmail(ctx context.Context, email string) (GetAdminByEmailRow, error) {
-	row := q.db.QueryRowContext(ctx, getAdminByEmail, email)
-	var i GetAdminByEmailRow
-	err := row.Scan(
-		&i.ID,
-		&i.Username,
-		&i.FirstName,
-		&i.LastName,
-		&i.Email,
-		&i.PasswordHash,
-		&i.IsActive,
-		&i.EmailVerified,
-		&i.VerificationCode,
-		&i.VerificationExpiresAt,
-		&i.ResetCode,
-		&i.ResetCodeExpiresAt,
-		&i.RoleName,
-	)
-	return i, err
-}
-
-const getAdminByUsername = `-- name: GetAdminByUsername :one
-SELECT
-    a.id,
-    a.username,
-    a.first_name,
-    a.last_name,
-    a.email,
-    a.password_hash,
-    a.is_active,
-    a.email_verified,
-    a.verification_code,
-    a.verification_expires_at,
-    a.reset_code,
-    a.reset_code_expires_at,
-    r.name as role_name
-FROM admins a
-JOIN roles r ON a.role_id = r.id
-WHERE a.username = $1 LIMIT 1
-`
-
-type GetAdminByUsernameRow struct {
-	ID                    int32          `json:"id"`
-	Username              string         `json:"username"`
-	FirstName             string         `json:"first_name"`
-	LastName              string         `json:"last_name"`
-	Email                 string         `json:"email"`
-	PasswordHash          string         `json:"password_hash"`
-	IsActive              bool           `json:"is_active"`
-	EmailVerified         bool           `json:"email_verified"`
-	VerificationCode      sql.NullString `json:"verification_code"`
-	VerificationExpiresAt sql.NullTime   `json:"verification_expires_at"`
-	ResetCode             sql.NullString `json:"reset_code"`
-	ResetCodeExpiresAt    sql.NullTime   `json:"reset_code_expires_at"`
-	RoleName              string         `json:"role_name"`
-}
-
-func (q *Queries) GetAdminByUsername(ctx context.Context, username string) (GetAdminByUsernameRow, error) {
-	row := q.db.QueryRowContext(ctx, getAdminByUsername, username)
-	var i GetAdminByUsernameRow
-	err := row.Scan(
-		&i.ID,
-		&i.Username,
-		&i.FirstName,
-		&i.LastName,
-		&i.Email,
-		&i.PasswordHash,
-		&i.IsActive,
-		&i.EmailVerified,
-		&i.VerificationCode,
-		&i.VerificationExpiresAt,
-		&i.ResetCode,
-		&i.ResetCodeExpiresAt,
-		&i.RoleName,
-	)
-	return i, err
-}
-
-const getAdminPermissions = `-- name: GetAdminPermissions :many
-SELECT p.code
-FROM permissions p
-JOIN role_permissions rp ON p.id = rp.permission_id
-JOIN roles r ON rp.role_id = r.id
-JOIN admins a ON a.role_id = r.id
-WHERE a.id = $1
-`
-
-func (q *Queries) GetAdminPermissions(ctx context.Context, id int32) ([]string, error) {
-	rows, err := q.db.QueryContext(ctx, getAdminPermissions, id)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []string{}
-	for rows.Next() {
-		var code string
-		if err := rows.Scan(&code); err != nil {
-			return nil, err
-		}
-		items = append(items, code)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -467,7 +460,7 @@ func (q *Queries) GetLoginHistory(ctx context.Context, limit int32) ([]LoginHist
 }
 
 const getPasswordResetToken = `-- name: GetPasswordResetToken :one
-SELECT id, user_id, token, expires_at, used FROM password_reset_tokens
+SELECT id, developer_id, token, expires_at, used FROM password_reset_tokens
 WHERE token = $1 AND expires_at > NOW() AND used = FALSE
 LIMIT 1
 `
@@ -477,7 +470,7 @@ func (q *Queries) GetPasswordResetToken(ctx context.Context, token string) (Pass
 	var i PasswordResetToken
 	err := row.Scan(
 		&i.ID,
-		&i.UserID,
+		&i.DeveloperID,
 		&i.Token,
 		&i.ExpiresAt,
 		&i.Used,
@@ -485,304 +478,159 @@ func (q *Queries) GetPasswordResetToken(ctx context.Context, token string) (Pass
 	return i, err
 }
 
-const getRefreshToken = `-- name: GetRefreshToken :one
-SELECT id, user_id, token, expires_at, revoked, created_at, updated_at FROM refresh_tokens
-WHERE token = $1 AND expires_at > NOW() AND revoked = FALSE
-LIMIT 1
+const getTenantByEmail = `-- name: GetTenantByEmail :one
+SELECT
+    a.id,
+    a.organization,
+    a.email,
+    a.password_hash,
+    a.is_active,
+    a.plan,
+    a.email_verified,
+    a.verification_code,
+    a.verification_expires_at,
+    a.reset_code,
+    a.reset_code_expires_at
+FROM tenants a
+WHERE a.email = $1 LIMIT 1
 `
 
-func (q *Queries) GetRefreshToken(ctx context.Context, token string) (RefreshToken, error) {
-	row := q.db.QueryRowContext(ctx, getRefreshToken, token)
-	var i RefreshToken
+type GetTenantByEmailRow struct {
+	ID                    int32          `json:"id"`
+	Organization          string         `json:"organization"`
+	Email                 string         `json:"email"`
+	PasswordHash          string         `json:"password_hash"`
+	IsActive              bool           `json:"is_active"`
+	Plan                  string         `json:"plan"`
+	EmailVerified         bool           `json:"email_verified"`
+	VerificationCode      sql.NullString `json:"verification_code"`
+	VerificationExpiresAt sql.NullTime   `json:"verification_expires_at"`
+	ResetCode             sql.NullString `json:"reset_code"`
+	ResetCodeExpiresAt    sql.NullTime   `json:"reset_code_expires_at"`
+}
+
+func (q *Queries) GetTenantByEmail(ctx context.Context, email string) (GetTenantByEmailRow, error) {
+	row := q.db.QueryRowContext(ctx, getTenantByEmail, email)
+	var i GetTenantByEmailRow
 	err := row.Scan(
 		&i.ID,
-		&i.UserID,
-		&i.Token,
-		&i.ExpiresAt,
-		&i.Revoked,
+		&i.Organization,
+		&i.Email,
+		&i.PasswordHash,
+		&i.IsActive,
+		&i.Plan,
+		&i.EmailVerified,
+		&i.VerificationCode,
+		&i.VerificationExpiresAt,
+		&i.ResetCode,
+		&i.ResetCodeExpiresAt,
+	)
+	return i, err
+}
+
+const getTenantByID = `-- name: GetTenantByID :one
+SELECT id, organization, email, password_hash, is_active, plan, email_verified, verification_code, verification_expires_at, reset_code, reset_code_expires_at, created_at, updated_at FROM tenants
+WHERE id = $1 LIMIT 1
+`
+
+func (q *Queries) GetTenantByID(ctx context.Context, id int32) (Tenant, error) {
+	row := q.db.QueryRowContext(ctx, getTenantByID, id)
+	var i Tenant
+	err := row.Scan(
+		&i.ID,
+		&i.Organization,
+		&i.Email,
+		&i.PasswordHash,
+		&i.IsActive,
+		&i.Plan,
+		&i.EmailVerified,
+		&i.VerificationCode,
+		&i.VerificationExpiresAt,
+		&i.ResetCode,
+		&i.ResetCodeExpiresAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
 }
 
-const getRoleByID = `-- name: GetRoleByID :one
-SELECT id, name, description FROM roles WHERE id = $1 LIMIT 1
-`
-
-func (q *Queries) GetRoleByID(ctx context.Context, id int32) (Role, error) {
-	row := q.db.QueryRowContext(ctx, getRoleByID, id)
-	var i Role
-	err := row.Scan(&i.ID, &i.Name, &i.Description)
-	return i, err
-}
-
-const getRolePermissions = `-- name: GetRolePermissions :many
-SELECT p.id, p.code, p.description FROM permissions p
-JOIN role_permissions rp ON p.id = rp.permission_id
-WHERE rp.role_id = $1
-`
-
-func (q *Queries) GetRolePermissions(ctx context.Context, roleID int32) ([]Permission, error) {
-	rows, err := q.db.QueryContext(ctx, getRolePermissions, roleID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []Permission{}
-	for rows.Next() {
-		var i Permission
-		if err := rows.Scan(&i.ID, &i.Code, &i.Description); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getUserByEmail = `-- name: GetUserByEmail :one
+const getTenantByOrganization = `-- name: GetTenantByOrganization :one
 SELECT
-    u.id,
-    u.username,
-    u.first_name,
-    u.last_name,
-    u.email,
-    u.password_hash,
-    u.gender,
-    u.is_active,
-    r.name as role_name
-FROM users u
-JOIN roles r ON u.role_id = r.id
-WHERE u.email = $1 LIMIT 1
+    a.id,
+    a.organization,
+    a.email,
+    a.password_hash,
+    a.is_active,
+    a.plan,
+    a.email_verified,
+    a.verification_code,
+    a.verification_expires_at,
+    a.reset_code,
+    a.reset_code_expires_at
+FROM tenants a
+WHERE a.organization = $1 LIMIT 1
 `
 
-type GetUserByEmailRow struct {
-	ID           int32          `json:"id"`
-	Username     string         `json:"username"`
-	FirstName    string         `json:"first_name"`
-	LastName     string         `json:"last_name"`
-	Email        sql.NullString `json:"email"`
-	PasswordHash string         `json:"password_hash"`
-	Gender       sql.NullString `json:"gender"`
-	IsActive     sql.NullBool   `json:"is_active"`
-	RoleName     string         `json:"role_name"`
+type GetTenantByOrganizationRow struct {
+	ID                    int32          `json:"id"`
+	Organization          string         `json:"organization"`
+	Email                 string         `json:"email"`
+	PasswordHash          string         `json:"password_hash"`
+	IsActive              bool           `json:"is_active"`
+	Plan                  string         `json:"plan"`
+	EmailVerified         bool           `json:"email_verified"`
+	VerificationCode      sql.NullString `json:"verification_code"`
+	VerificationExpiresAt sql.NullTime   `json:"verification_expires_at"`
+	ResetCode             sql.NullString `json:"reset_code"`
+	ResetCodeExpiresAt    sql.NullTime   `json:"reset_code_expires_at"`
 }
 
-func (q *Queries) GetUserByEmail(ctx context.Context, email sql.NullString) (GetUserByEmailRow, error) {
-	row := q.db.QueryRowContext(ctx, getUserByEmail, email)
-	var i GetUserByEmailRow
+func (q *Queries) GetTenantByOrganization(ctx context.Context, organization string) (GetTenantByOrganizationRow, error) {
+	row := q.db.QueryRowContext(ctx, getTenantByOrganization, organization)
+	var i GetTenantByOrganizationRow
 	err := row.Scan(
 		&i.ID,
-		&i.Username,
-		&i.FirstName,
-		&i.LastName,
+		&i.Organization,
 		&i.Email,
 		&i.PasswordHash,
-		&i.Gender,
 		&i.IsActive,
-		&i.RoleName,
+		&i.Plan,
+		&i.EmailVerified,
+		&i.VerificationCode,
+		&i.VerificationExpiresAt,
+		&i.ResetCode,
+		&i.ResetCodeExpiresAt,
 	)
 	return i, err
 }
 
-const getUserByID = `-- name: GetUserByID :one
-SELECT u.id, u.username, u.first_name, u.last_name, u.email, u.password_hash, u.gender, u.role_id, u.is_active, u.metadata, u.created_at, u.updated_at, r.name as role_name FROM users u
-JOIN roles r ON u.role_id = r.id
-WHERE u.id = $1 LIMIT 1
+const listActivityLogs = `-- name: ListActivityLogs :many
+SELECT id, business_id, user_id, action, details, entity_id, entity_type, ip_address, user_agent, metadata, created_at FROM activity_logs
+WHERE business_id = $1
+ORDER BY created_at DESC
 `
 
-type GetUserByIDRow struct {
-	ID           int32                 `json:"id"`
-	Username     string                `json:"username"`
-	FirstName    string                `json:"first_name"`
-	LastName     string                `json:"last_name"`
-	Email        sql.NullString        `json:"email"`
-	PasswordHash string                `json:"password_hash"`
-	Gender       sql.NullString        `json:"gender"`
-	RoleID       sql.NullInt32         `json:"role_id"`
-	IsActive     sql.NullBool          `json:"is_active"`
-	Metadata     pqtype.NullRawMessage `json:"metadata"`
-	CreatedAt    sql.NullTime          `json:"created_at"`
-	UpdatedAt    sql.NullTime          `json:"updated_at"`
-	RoleName     string                `json:"role_name"`
-}
-
-func (q *Queries) GetUserByID(ctx context.Context, id int32) (GetUserByIDRow, error) {
-	row := q.db.QueryRowContext(ctx, getUserByID, id)
-	var i GetUserByIDRow
-	err := row.Scan(
-		&i.ID,
-		&i.Username,
-		&i.FirstName,
-		&i.LastName,
-		&i.Email,
-		&i.PasswordHash,
-		&i.Gender,
-		&i.RoleID,
-		&i.IsActive,
-		&i.Metadata,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-		&i.RoleName,
-	)
-	return i, err
-}
-
-const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT
-    u.id,
-    u.username,
-    u.first_name,
-    u.last_name,
-    u.email,
-    u.password_hash,
-    u.gender,
-    u.is_active,
-    r.name as role_name
-FROM users u
-JOIN roles r ON u.role_id = r.id
-WHERE u.username = $1 LIMIT 1
-`
-
-type GetUserByUsernameRow struct {
-	ID           int32          `json:"id"`
-	Username     string         `json:"username"`
-	FirstName    string         `json:"first_name"`
-	LastName     string         `json:"last_name"`
-	Email        sql.NullString `json:"email"`
-	PasswordHash string         `json:"password_hash"`
-	Gender       sql.NullString `json:"gender"`
-	IsActive     sql.NullBool   `json:"is_active"`
-	RoleName     string         `json:"role_name"`
-}
-
-func (q *Queries) GetUserByUsername(ctx context.Context, username string) (GetUserByUsernameRow, error) {
-	row := q.db.QueryRowContext(ctx, getUserByUsername, username)
-	var i GetUserByUsernameRow
-	err := row.Scan(
-		&i.ID,
-		&i.Username,
-		&i.FirstName,
-		&i.LastName,
-		&i.Email,
-		&i.PasswordHash,
-		&i.Gender,
-		&i.IsActive,
-		&i.RoleName,
-	)
-	return i, err
-}
-
-const getUserPermissions = `-- name: GetUserPermissions :many
-SELECT p.code
-FROM permissions p
-JOIN role_permissions rp ON p.id = rp.permission_id
-JOIN roles r ON rp.role_id = r.id
-JOIN users u ON u.role_id = r.id
-WHERE u.id = $1
-`
-
-func (q *Queries) GetUserPermissions(ctx context.Context, id int32) ([]string, error) {
-	rows, err := q.db.QueryContext(ctx, getUserPermissions, id)
+func (q *Queries) ListActivityLogs(ctx context.Context, businessID int32) ([]ActivityLog, error) {
+	rows, err := q.db.QueryContext(ctx, listActivityLogs, businessID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []string{}
+	items := []ActivityLog{}
 	for rows.Next() {
-		var code string
-		if err := rows.Scan(&code); err != nil {
-			return nil, err
-		}
-		items = append(items, code)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listRoles = `-- name: ListRoles :many
-SELECT id, name, description FROM roles ORDER BY name
-`
-
-func (q *Queries) ListRoles(ctx context.Context) ([]Role, error) {
-	rows, err := q.db.QueryContext(ctx, listRoles)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []Role{}
-	for rows.Next() {
-		var i Role
-		if err := rows.Scan(&i.ID, &i.Name, &i.Description); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listUsers = `-- name: ListUsers :many
-SELECT u.id, u.username, u.first_name, u.last_name, u.email, u.password_hash, u.gender, u.role_id, u.is_active, u.metadata, u.created_at, u.updated_at, r.name as role_name FROM users u
-JOIN roles r ON u.role_id = r.id
-ORDER BY u.created_at DESC
-`
-
-type ListUsersRow struct {
-	ID           int32                 `json:"id"`
-	Username     string                `json:"username"`
-	FirstName    string                `json:"first_name"`
-	LastName     string                `json:"last_name"`
-	Email        sql.NullString        `json:"email"`
-	PasswordHash string                `json:"password_hash"`
-	Gender       sql.NullString        `json:"gender"`
-	RoleID       sql.NullInt32         `json:"role_id"`
-	IsActive     sql.NullBool          `json:"is_active"`
-	Metadata     pqtype.NullRawMessage `json:"metadata"`
-	CreatedAt    sql.NullTime          `json:"created_at"`
-	UpdatedAt    sql.NullTime          `json:"updated_at"`
-	RoleName     string                `json:"role_name"`
-}
-
-func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
-	rows, err := q.db.QueryContext(ctx, listUsers)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListUsersRow{}
-	for rows.Next() {
-		var i ListUsersRow
+		var i ActivityLog
 		if err := rows.Scan(
 			&i.ID,
-			&i.Username,
-			&i.FirstName,
-			&i.LastName,
-			&i.Email,
-			&i.PasswordHash,
-			&i.Gender,
-			&i.RoleID,
-			&i.IsActive,
+			&i.BusinessID,
+			&i.UserID,
+			&i.Action,
+			&i.Details,
+			&i.EntityID,
+			&i.EntityType,
+			&i.IpAddress,
+			&i.UserAgent,
 			&i.Metadata,
 			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.RoleName,
 		); err != nil {
 			return nil, err
 		}
@@ -797,46 +645,125 @@ func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
 	return items, nil
 }
 
-const logActivity = `-- name: LogActivity :one
-INSERT INTO activity_logs (user_id, action, details, entity_id, entity_type, ip_address, user_agent)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, user_id, action, details, entity_id, entity_type, ip_address, user_agent, metadata, created_at
+const listActivityLogsByUser = `-- name: ListActivityLogsByUser :many
+SELECT id, business_id, user_id, action, details, entity_id, entity_type, ip_address, user_agent, metadata, created_at FROM activity_logs
+WHERE business_id = $1
+  AND user_id = $2
+ORDER BY created_at DESC
 `
 
-type LogActivityParams struct {
-	UserID     int32          `json:"user_id"`
-	Action     string         `json:"action"`
-	Details    string         `json:"details"`
-	EntityID   int32          `json:"entity_id"`
-	EntityType string         `json:"entity_type"`
-	IpAddress  sql.NullString `json:"ip_address"`
-	UserAgent  sql.NullString `json:"user_agent"`
+type ListActivityLogsByUserParams struct {
+	BusinessID int32 `json:"business_id"`
+	UserID     int32 `json:"user_id"`
 }
 
-func (q *Queries) LogActivity(ctx context.Context, arg LogActivityParams) (ActivityLog, error) {
-	row := q.db.QueryRowContext(ctx, logActivity,
-		arg.UserID,
-		arg.Action,
-		arg.Details,
-		arg.EntityID,
-		arg.EntityType,
-		arg.IpAddress,
-		arg.UserAgent,
-	)
-	var i ActivityLog
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.Action,
-		&i.Details,
-		&i.EntityID,
-		&i.EntityType,
-		&i.IpAddress,
-		&i.UserAgent,
-		&i.Metadata,
-		&i.CreatedAt,
-	)
-	return i, err
+func (q *Queries) ListActivityLogsByUser(ctx context.Context, arg ListActivityLogsByUserParams) ([]ActivityLog, error) {
+	rows, err := q.db.QueryContext(ctx, listActivityLogsByUser, arg.BusinessID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ActivityLog{}
+	for rows.Next() {
+		var i ActivityLog
+		if err := rows.Scan(
+			&i.ID,
+			&i.BusinessID,
+			&i.UserID,
+			&i.Action,
+			&i.Details,
+			&i.EntityID,
+			&i.EntityType,
+			&i.IpAddress,
+			&i.UserAgent,
+			&i.Metadata,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listBusinessRoles = `-- name: ListBusinessRoles :many
+SELECT id, business_id, name, description, created_at, updated_at FROM business_roles
+WHERE business_id = $1
+ORDER BY created_at DESC
+`
+
+func (q *Queries) ListBusinessRoles(ctx context.Context, businessID sql.NullInt32) ([]BusinessRole, error) {
+	rows, err := q.db.QueryContext(ctx, listBusinessRoles, businessID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []BusinessRole{}
+	for rows.Next() {
+		var i BusinessRole
+		if err := rows.Scan(
+			&i.ID,
+			&i.BusinessID,
+			&i.Name,
+			&i.Description,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listLegacyPermissions = `-- name: ListLegacyPermissions :many
+SELECT id, code, description, module, action, resource, scope, is_active, created_at FROM permissions
+ORDER BY id
+`
+
+func (q *Queries) ListLegacyPermissions(ctx context.Context) ([]Permission, error) {
+	rows, err := q.db.QueryContext(ctx, listLegacyPermissions)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Permission{}
+	for rows.Next() {
+		var i Permission
+		if err := rows.Scan(
+			&i.ID,
+			&i.Code,
+			&i.Description,
+			&i.Module,
+			&i.Action,
+			&i.Resource,
+			&i.Scope,
+			&i.IsActive,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const logLoginAttempt = `-- name: LogLoginAttempt :exec
@@ -864,8 +791,8 @@ func (q *Queries) LogLoginAttempt(ctx context.Context, arg LogLoginAttemptParams
 	return err
 }
 
-const markAdminEmailVerified = `-- name: MarkAdminEmailVerified :exec
-UPDATE admins
+const markTenantEmailVerified = `-- name: MarkTenantEmailVerified :exec
+UPDATE tenants
 SET email_verified = $2,
     verification_code = NULL,
     verification_expires_at = NULL,
@@ -873,13 +800,13 @@ SET email_verified = $2,
 WHERE id = $1
 `
 
-type MarkAdminEmailVerifiedParams struct {
+type MarkTenantEmailVerifiedParams struct {
 	ID            int32 `json:"id"`
 	EmailVerified bool  `json:"email_verified"`
 }
 
-func (q *Queries) MarkAdminEmailVerified(ctx context.Context, arg MarkAdminEmailVerifiedParams) error {
-	_, err := q.db.ExecContext(ctx, markAdminEmailVerified, arg.ID, arg.EmailVerified)
+func (q *Queries) MarkTenantEmailVerified(ctx context.Context, arg MarkTenantEmailVerifiedParams) error {
+	_, err := q.db.ExecContext(ctx, markTenantEmailVerified, arg.ID, arg.EmailVerified)
 	return err
 }
 
@@ -909,188 +836,143 @@ func (q *Queries) RemovePermissionFromRole(ctx context.Context, arg RemovePermis
 	return err
 }
 
-const revokeAllUserRefreshTokens = `-- name: RevokeAllUserRefreshTokens :exec
-UPDATE refresh_tokens
-SET revoked = TRUE, updated_at = CURRENT_TIMESTAMP
-WHERE user_id = $1
-`
-
-func (q *Queries) RevokeAllUserRefreshTokens(ctx context.Context, userID int32) error {
-	_, err := q.db.ExecContext(ctx, revokeAllUserRefreshTokens, userID)
-	return err
-}
-
-const revokeRefreshToken = `-- name: RevokeRefreshToken :exec
-UPDATE refresh_tokens
-SET revoked = TRUE, updated_at = CURRENT_TIMESTAMP
-WHERE token = $1
-`
-
-func (q *Queries) RevokeRefreshToken(ctx context.Context, token string) error {
-	_, err := q.db.ExecContext(ctx, revokeRefreshToken, token)
-	return err
-}
-
-const setAdminEmailVerification = `-- name: SetAdminEmailVerification :exec
-UPDATE admins
+const setTenantEmailVerification = `-- name: SetTenantEmailVerification :exec
+UPDATE tenants
 SET verification_code = $2,
     verification_expires_at = $3,
     updated_at = NOW()
 WHERE id = $1
 `
 
-type SetAdminEmailVerificationParams struct {
+type SetTenantEmailVerificationParams struct {
 	ID                    int32          `json:"id"`
 	VerificationCode      sql.NullString `json:"verification_code"`
 	VerificationExpiresAt sql.NullTime   `json:"verification_expires_at"`
 }
 
-func (q *Queries) SetAdminEmailVerification(ctx context.Context, arg SetAdminEmailVerificationParams) error {
-	_, err := q.db.ExecContext(ctx, setAdminEmailVerification, arg.ID, arg.VerificationCode, arg.VerificationExpiresAt)
+func (q *Queries) SetTenantEmailVerification(ctx context.Context, arg SetTenantEmailVerificationParams) error {
+	_, err := q.db.ExecContext(ctx, setTenantEmailVerification, arg.ID, arg.VerificationCode, arg.VerificationExpiresAt)
 	return err
 }
 
-const setAdminResetCode = `-- name: SetAdminResetCode :exec
-UPDATE admins
+const setTenantResetCode = `-- name: SetTenantResetCode :exec
+UPDATE tenants
 SET reset_code = $2,
     reset_code_expires_at = $3,
     updated_at = NOW()
 WHERE id = $1
 `
 
-type SetAdminResetCodeParams struct {
+type SetTenantResetCodeParams struct {
 	ID                 int32          `json:"id"`
 	ResetCode          sql.NullString `json:"reset_code"`
 	ResetCodeExpiresAt sql.NullTime   `json:"reset_code_expires_at"`
 }
 
-func (q *Queries) SetAdminResetCode(ctx context.Context, arg SetAdminResetCodeParams) error {
-	_, err := q.db.ExecContext(ctx, setAdminResetCode, arg.ID, arg.ResetCode, arg.ResetCodeExpiresAt)
+func (q *Queries) SetTenantResetCode(ctx context.Context, arg SetTenantResetCodeParams) error {
+	_, err := q.db.ExecContext(ctx, setTenantResetCode, arg.ID, arg.ResetCode, arg.ResetCodeExpiresAt)
 	return err
 }
 
-const updateAdminPassword = `-- name: UpdateAdminPassword :exec
-UPDATE admins
-SET password_hash = $2, updated_at = CURRENT_TIMESTAMP
+const updateBusinessRole = `-- name: UpdateBusinessRole :one
+UPDATE business_roles
+SET name = COALESCE($2, name),
+    description = COALESCE($3, description),
+    updated_at = CURRENT_TIMESTAMP
 WHERE id = $1
+RETURNING id, business_id, name, description, created_at, updated_at
 `
 
-type UpdateAdminPasswordParams struct {
-	ID           int32  `json:"id"`
-	PasswordHash string `json:"password_hash"`
-}
-
-func (q *Queries) UpdateAdminPassword(ctx context.Context, arg UpdateAdminPasswordParams) error {
-	_, err := q.db.ExecContext(ctx, updateAdminPassword, arg.ID, arg.PasswordHash)
-	return err
-}
-
-const updateRole = `-- name: UpdateRole :one
-UPDATE roles
-SET
-    name = COALESCE($2, name),
-    description = COALESCE($3, description)
-WHERE id = $1
-RETURNING id, name, description
-`
-
-type UpdateRoleParams struct {
+type UpdateBusinessRoleParams struct {
 	ID          int32          `json:"id"`
-	Name        string         `json:"name"`
+	Name        sql.NullString `json:"name"`
 	Description sql.NullString `json:"description"`
 }
 
-func (q *Queries) UpdateRole(ctx context.Context, arg UpdateRoleParams) (Role, error) {
-	row := q.db.QueryRowContext(ctx, updateRole, arg.ID, arg.Name, arg.Description)
-	var i Role
-	err := row.Scan(&i.ID, &i.Name, &i.Description)
-	return i, err
-}
-
-const updateUser = `-- name: UpdateUser :one
-UPDATE users
-SET username   = COALESCE($1, username),
-    first_name = COALESCE($2, first_name),
-    last_name  = COALESCE($3, last_name),
-    email      = COALESCE($4, email),
-    gender     = COALESCE($5, gender),
-    role_id    = COALESCE($6, role_id),
-    is_active  = COALESCE($7, is_active),
-    metadata = COALESCE($8, metadata)
-WHERE id = $9
-RETURNING id, username, first_name, last_name, email, password_hash, gender, role_id, is_active, metadata, created_at, updated_at
-`
-
-type UpdateUserParams struct {
-	Username  sql.NullString        `json:"username"`
-	FirstName sql.NullString        `json:"first_name"`
-	LastName  sql.NullString        `json:"last_name"`
-	Email     sql.NullString        `json:"email"`
-	Gender    sql.NullString        `json:"gender"`
-	RoleID    sql.NullInt32         `json:"role_id"`
-	IsActive  sql.NullBool          `json:"is_active"`
-	Metadata  pqtype.NullRawMessage `json:"metadata"`
-	ID        int32                 `json:"id"`
-}
-
-func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
-	row := q.db.QueryRowContext(ctx, updateUser,
-		arg.Username,
-		arg.FirstName,
-		arg.LastName,
-		arg.Email,
-		arg.Gender,
-		arg.RoleID,
-		arg.IsActive,
-		arg.Metadata,
-		arg.ID,
-	)
-	var i User
+func (q *Queries) UpdateBusinessRole(ctx context.Context, arg UpdateBusinessRoleParams) (BusinessRole, error) {
+	row := q.db.QueryRowContext(ctx, updateBusinessRole, arg.ID, arg.Name, arg.Description)
+	var i BusinessRole
 	err := row.Scan(
 		&i.ID,
-		&i.Username,
-		&i.FirstName,
-		&i.LastName,
-		&i.Email,
-		&i.PasswordHash,
-		&i.Gender,
-		&i.RoleID,
-		&i.IsActive,
-		&i.Metadata,
+		&i.BusinessID,
+		&i.Name,
+		&i.Description,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
 }
 
-const updateUserPassword = `-- name: UpdateUserPassword :exec
-UPDATE users
+const updateTenant = `-- name: UpdateTenant :one
+UPDATE tenants
+SET organization   = COALESCE($1, organization),
+    email      = COALESCE($2, email),
+    is_active  = COALESCE($3, is_active)
+WHERE id = $4
+RETURNING id, organization, email, password_hash, is_active, plan, email_verified, verification_code, verification_expires_at, reset_code, reset_code_expires_at, created_at, updated_at
+`
+
+type UpdateTenantParams struct {
+	Organization sql.NullString `json:"organization"`
+	Email        sql.NullString `json:"email"`
+	IsActive     sql.NullBool   `json:"is_active"`
+	ID           int32          `json:"id"`
+}
+
+func (q *Queries) UpdateTenant(ctx context.Context, arg UpdateTenantParams) (Tenant, error) {
+	row := q.db.QueryRowContext(ctx, updateTenant,
+		arg.Organization,
+		arg.Email,
+		arg.IsActive,
+		arg.ID,
+	)
+	var i Tenant
+	err := row.Scan(
+		&i.ID,
+		&i.Organization,
+		&i.Email,
+		&i.PasswordHash,
+		&i.IsActive,
+		&i.Plan,
+		&i.EmailVerified,
+		&i.VerificationCode,
+		&i.VerificationExpiresAt,
+		&i.ResetCode,
+		&i.ResetCodeExpiresAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateTenantPassword = `-- name: UpdateTenantPassword :exec
+UPDATE tenants
 SET password_hash = $2, updated_at = CURRENT_TIMESTAMP
 WHERE id = $1
 `
 
-type UpdateUserPasswordParams struct {
+type UpdateTenantPasswordParams struct {
 	ID           int32  `json:"id"`
 	PasswordHash string `json:"password_hash"`
 }
 
-func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error {
-	_, err := q.db.ExecContext(ctx, updateUserPassword, arg.ID, arg.PasswordHash)
+func (q *Queries) UpdateTenantPassword(ctx context.Context, arg UpdateTenantPasswordParams) error {
+	_, err := q.db.ExecContext(ctx, updateTenantPassword, arg.ID, arg.PasswordHash)
 	return err
 }
 
-const updateUserStatus = `-- name: UpdateUserStatus :exec
-UPDATE users
+const updateTenantStatus = `-- name: UpdateTenantStatus :exec
+UPDATE tenants
 SET is_active = $2, updated_at = CURRENT_TIMESTAMP
 WHERE id = $1
 `
 
-type UpdateUserStatusParams struct {
-	ID       int32        `json:"id"`
-	IsActive sql.NullBool `json:"is_active"`
+type UpdateTenantStatusParams struct {
+	ID       int32 `json:"id"`
+	IsActive bool  `json:"is_active"`
 }
 
-func (q *Queries) UpdateUserStatus(ctx context.Context, arg UpdateUserStatusParams) error {
-	_, err := q.db.ExecContext(ctx, updateUserStatus, arg.ID, arg.IsActive)
+func (q *Queries) UpdateTenantStatus(ctx context.Context, arg UpdateTenantStatusParams) error {
+	_, err := q.db.ExecContext(ctx, updateTenantStatus, arg.ID, arg.IsActive)
 	return err
 }

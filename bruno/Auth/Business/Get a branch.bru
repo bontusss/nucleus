@@ -1,0 +1,20 @@
+meta {
+  name: Get a branch
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseURI}}org/branch/9/14
+  body: none
+  auth: inherit
+}
+
+headers {
+  {{var}}: {{key}}
+  Authorization: Bearer {{token}}
+}
+
+settings {
+  encodeUrl: true
+}

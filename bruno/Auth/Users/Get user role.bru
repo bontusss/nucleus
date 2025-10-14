@@ -1,0 +1,21 @@
+meta {
+  name: Get user role
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseURI}}users/1/roles
+  body: none
+  auth: apikey
+}
+
+auth:apikey {
+  key: {{var}}
+  value: {{key}}
+  placement: header
+}
+
+settings {
+  encodeUrl: true
+}

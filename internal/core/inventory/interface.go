@@ -47,13 +47,13 @@ type Querier interface {
 	GetColorByName(ctx context.Context, name string) (db.Color, error)
 	// ListColors(ctx context.Context) ([]db.Color, error)
 	// UpdateColor(ctx context.Context, args db.UpdateColorParams) (db.Color, error)
-	LogActivity(ctx context.Context, params db.LogActivityParams) (db.ActivityLog, error)
+	CreateActivityLog(ctx context.Context, params db.CreateActivityLogParams) (db.ActivityLog, error)
 	// DeleteColor(ctx context.Context, id int32) (db.Color, error)
 }
 
 type InventoryInterface interface {
 	CreateBrand(ctx context.Context, params db.CreateBrandParams) (db.Brand, error)
-	LogActivity(ctx context.Context, params db.LogActivityParams) (db.ActivityLog, error)
+	LogActivity(ctx context.Context, params db.CreateActivityLogParams) (db.ActivityLog, error)
 	CreateCategory(ctx context.Context, params db.CreateCategoryParams) (db.Category, error)
 	GetCategory(ctx context.Context, id int32) (db.Category, error)
 	CreateItem(ctx context.Context, params db.CreateItemParams) (db.Item, error)

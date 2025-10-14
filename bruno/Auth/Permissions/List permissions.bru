@@ -1,0 +1,25 @@
+meta {
+  name: List permissions
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseURI}}permissions?module=business
+  body: none
+  auth: apikey
+}
+
+params:query {
+  module: business
+}
+
+auth:apikey {
+  key: {{var}}
+  value: {{key}}
+  placement: header
+}
+
+settings {
+  encodeUrl: true
+}

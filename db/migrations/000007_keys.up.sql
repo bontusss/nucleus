@@ -1,10 +1,10 @@
 -- API Keys table
 CREATE TABLE api_keys (
     id SERIAL PRIMARY KEY,
-    key_name VARCHAR(100) NOT NULL,
+    key_name VARCHAR(100) NOT NULL, 
     api_key VARCHAR(64) UNIQUE NOT NULL,
     api_secret VARCHAR(64) NOT NULL, -- For HMAC signing
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    tenant_id INTEGER NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     allowed_modules TEXT[] NOT NULL DEFAULT '{}', -- Array of module names
     monthly_limit INTEGER NOT NULL DEFAULT 1000,
     current_month_requests INTEGER NOT NULL DEFAULT 0,
@@ -30,7 +30,7 @@ CREATE TABLE api_key_usages (
 
 -- Indexes for performance
 CREATE INDEX idx_api_keys_key ON api_keys(api_key);
-CREATE INDEX idx_api_keys_user ON api_keys(user_id);
+CREATE INDEX idx_api_keys_tenant ON api_keys(tenant_id);
 CREATE INDEX idx_api_key_usage_key_date ON api_key_usages(api_key_id, created_at);
 CREATE INDEX idx_api_key_usage_month ON api_key_usages(created_at);
 

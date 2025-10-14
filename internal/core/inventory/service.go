@@ -23,8 +23,8 @@ func (i *Inventory) CreateBrand(ctx context.Context, args db.CreateBrandParams) 
 	return i.queries.CreateBrand(ctx, args)
 }
 
-func (i *Inventory) LogActivity(ctx context.Context, args db.LogActivityParams) (db.ActivityLog, error) {
-	return i.queries.LogActivity(ctx, args)
+func (i *Inventory) LogActivity(ctx context.Context, args db.CreateActivityLogParams) (db.ActivityLog, error) {
+	return i.queries.CreateActivityLog(ctx, args)
 }
 
 func (i *Inventory) CreateCategory(ctx context.Context, params db.CreateCategoryParams) (db.Category, error) {

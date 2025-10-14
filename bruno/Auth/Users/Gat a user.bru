@@ -1,0 +1,21 @@
+meta {
+  name: Gat a user
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseURI}}users/3
+  body: none
+  auth: apikey
+}
+
+auth:apikey {
+  key: {{var}}
+  value: {{key}}
+  placement: header
+}
+
+settings {
+  encodeUrl: true
+}

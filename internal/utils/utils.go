@@ -240,3 +240,132 @@ func PatchMetadata(dest *pqtype.NullRawMessage, src map[string]any) {
 		dest.RawMessage = b
 	}
 }
+
+// GetStringOrDefault returns the value if not nil, otherwise returns the default value
+func GetStringOrDefault(value *string, defaultValue string) string {
+	if value == nil {
+		return defaultValue
+	}
+	return *value
+}
+
+// GetBoolOrDefault returns the value if not nil, otherwise returns the default value
+func GetBoolOrDefault(value *bool, defaultValue bool) bool {
+	if value == nil {
+		return defaultValue
+	}
+	return *value
+}
+
+// GetInt32OrDefault returns the value if not nil, otherwise returns the default value
+func GetInt32OrDefault(value *int32, defaultValue int32) int32 {
+	if value == nil {
+		return defaultValue
+	}
+	return *value
+}
+
+// GetTimeOrDefault returns the time value if not nil, otherwise returns current time
+func GetTimeOrDefault(value *time.Time) time.Time {
+	if value == nil {
+		return time.Now()
+	}
+	return *value
+}
+
+// StringPtr returns a pointer to the string value
+func StringPtr(s string) *string {
+	return &s
+}
+
+// BoolPtr returns a pointer to the bool value
+func BoolPtr(b bool) *bool {
+	return &b
+}
+
+// Int32Ptr returns a pointer to the int32 value
+func Int32Ptr(i int32) *int32 {
+	return &i
+}
+
+// TimePtr returns a pointer to the time value
+func TimePtr(t time.Time) *time.Time {
+	return &t
+}
+
+// IsValidEmail performs basic email validation
+func IsValidEmail(email string) bool {
+	// Basic email validation - can be enhanced with regex
+	return len(email) > 0 &&
+		len(email) < 255 &&
+		containsChar(email, '@') &&
+		containsChar(email, '.')
+}
+
+// containsChar checks if string contains a specific character
+func containsChar(s string, char rune) bool {
+	for _, c := range s {
+		if c == char {
+			return true
+		}
+	}
+	return false
+}
+
+// TruncateString truncates a string to a maximum length
+func TruncateString(s string, maxLength int) string {
+	if len(s) <= maxLength {
+		return s
+	}
+	return s[:maxLength]
+}
+
+// Contains checks if a slice contains a specific string
+func Contains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
+}
+
+// ContainsInt32 checks if a slice contains a specific int32
+func ContainsInt32(slice []int32, item int32) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
+}
+
+// RemoveDuplicateStrings removes duplicate strings from a slice
+func RemoveDuplicateStrings(slice []string) []string {
+	keys := make(map[string]bool)
+	var result []string
+
+	for _, item := range slice {
+		if !keys[item] {
+			keys[item] = true
+			result = append(result, item)
+		}
+	}
+
+	return result
+}
+
+// RemoveDuplicateInt32 removes duplicate int32s from a slice
+func RemoveDuplicateInt32(slice []int32) []int32 {
+	keys := make(map[int32]bool)
+	var result []int32
+
+	for _, item := range slice {
+		if !keys[item] {
+			keys[item] = true
+			result = append(result, item)
+		}
+	}
+
+	return result
+}

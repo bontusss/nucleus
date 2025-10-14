@@ -5,21 +5,30 @@ meta {
 }
 
 post {
-  url: {{baseURI}}business
-  body: multipartForm
-  auth: bearer
+  url: {{baseURI}}org
+  body: json
+  auth: none
 }
 
-auth:bearer {
-  token: {{token}}
+headers {
+  "{{var}}": {{key}}
+  Authorization: Bearer {{token}}
+}
+
+body:json {
+  {
+    "name": "test business",
+    "email": "testemail1@mail.com",
+    "country": "nigeria"
+  }
 }
 
 body:multipart-form {
-  name:  Hotels l
+  name: Majeckul hotels
   country: Nigeria
   logo: @file(/home/bontus/Downloads/logo.jpg)
   metadata: {"industry":"hospitality","tier":"gold","founded":2024}
-  email: test@email.com
+  email: test90@email.com
 }
 
 settings {

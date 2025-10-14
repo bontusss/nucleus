@@ -3,6 +3,7 @@ package key
 import (
 	"net/http"
 	db "nucleus/db/sqlc"
+	"nucleus/internal/auth"
 	"nucleus/internal/config"
 	"nucleus/internal/core/api"
 	"nucleus/pkg/jwt"
@@ -23,10 +24,16 @@ func NewHandler(service *Service, logger *logging.Logger, config *config.Config)
 	return &Handler{service: service, logger: logger, config: config}
 }
 
+func (h *Handler) RegisterRoutes(r *gin.RouterGroup, authSvc *auth.Service) {
+	key := r.Group("/apikey")
+	key.Use(auth.DeveloperMiddleware(authSvc))
+	key.POST("", h.CreateAPIKey)
+}
+
 type CreateAPIKeyRequest struct {
-	KeyName        string    `json:"keyName" binding:"required"`
-	AllowedModules []string  `json:"allowedModules" binding:"required"`
-	MonthlyLimit   int       `json:"monthlyLimit" binding:"min=1"`
+	KeyName        string    `json:"key_name" binding:"required"`
+	AllowedModules []string  `json:"allowed_modules" binding:"required"`
+	MonthlyLimit   int       `json:"monthly_limit" binding:"omitempty"`
 	ExpiresAt      time.Time `json:"expiresAt"`
 }
 
@@ -56,7 +63,12 @@ func (h *Handler) CreateAPIKey(c *gin.Context) {
 		api.ErrorResponse(c, 500, api.SERVERERROR)
 		return
 	}
-	userID := claims.UserID
+	userID := claims.TenantID
+
+	// TODO: Check for usage, if inactive for more than 30 days,
+	if req.ExpiresAt.IsZero() {
+		req.ExpiresAt = time.Now().AddDate(1, 0, 0)
+	}
 
 	// Set default monthly limit if not provided
 	limit, err := strconv.Atoi(h.config.APIKEY_MONTHLY_REQUEST_COUNT)
@@ -72,7 +84,7 @@ func (h *Handler) CreateAPIKey(c *gin.Context) {
 	// Generate API key
 	result, err := h.service.GenerateAPIKey(c.Request.Context(), GenerateAPIKeyParams{
 		KeyName:        req.KeyName,
-		UserID:         userID,
+		TenantID:         userID,
 		AllowedModules: req.AllowedModules,
 		MonthlyLimit:   req.MonthlyLimit,
 		ExpiresAt:      req.ExpiresAt,
@@ -96,7 +108,7 @@ func (h *Handler) ListAPIKeys(c *gin.Context) {
 	}
 	userID := claims.(*jwt.Claims).UserID
 
-	keys, err := h.service.queries.GetAPIKeysByUser(c.Request.Context(), int32(userID))
+	keys, err := h.service.queries.GetAPIKeysByTenant(c.Request.Context(), int32(userID))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -126,7 +138,7 @@ func (h *Handler) GetAPIKeyUsage(c *gin.Context) {
 		return
 	}
 
-	if apiKey.UserID != int32(userID) {
+	if apiKey.TenantID != int32(userID) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
@@ -181,7 +193,7 @@ func (h *Handler) UpdateAPIKey(c *gin.Context) {
 		return
 	}
 
-	if apiKey.UserID != int32(userID) {
+	if apiKey.TenantID != int32(userID) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
@@ -245,7 +257,7 @@ func (h *Handler) DeleteAPIKey(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "API key not found"})
 		return
 	}
-	if apiKey.UserID != int32(userID) {
+	if apiKey.TenantID != int32(userID) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}

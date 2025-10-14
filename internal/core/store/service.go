@@ -31,6 +31,6 @@ func (s *Store) UpdateStore(ctx context.Context, params db.UpdateStoreParams) (d
 	return s.queries.UpdateStore(ctx, params)
 }
 
-func (s *Store) LogActivity(ctx context.Context, params db.LogActivityParams) (db.ActivityLog, error) {
-	return s.queries.LogActivity(ctx, params)
+func (s *Store) LogActivity(ctx context.Context, params db.CreateActivityLogParams) (db.ActivityLog, error) {
+	return s.queries.CreateActivityLog(ctx, params)
 }

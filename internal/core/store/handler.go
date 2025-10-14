@@ -1,13 +1,10 @@
 package store
 
 import (
-	"database/sql"
 	"fmt"
 	db "nucleus/db/sqlc"
 	"nucleus/internal/auth"
 	"nucleus/internal/core/api"
-	"nucleus/internal/utils"
-	"nucleus/pkg/jwt"
 	"nucleus/pkg/monitoring/logging"
 
 	"github.com/gin-gonic/gin"
@@ -65,12 +62,12 @@ type storeParams struct {
 // @Failure 500
 // @Router /store [post]
 func (h *Handler) CreateStore(c *gin.Context) {
-	claims, ok := jwt.GetUserFromContext(c)
-	if !ok {
-		h.logger.Errorf("could not get user from context")
-		api.ErrorResponse(c, 500, api.SERVERERROR)
-		return
-	}
+	// claims, ok := jwt.GetUserFromContext(c)
+	// if !ok {
+	// 	h.logger.Errorf("could not get user from context")
+	// 	api.ErrorResponse(c, 500, api.SERVERERROR)
+	// 	return
+	// }
 
 	var req storeParams
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -114,15 +111,15 @@ func (h *Handler) CreateStore(c *gin.Context) {
 	}
 
 	// Log activity
-	_, err = h.service.LogActivity(c, db.LogActivityParams{
-		UserID:     int32(claims.UserID),
-		Action:     "Created Store",
-		EntityType: "Store",
-		EntityID:   store.ID,
-		Details:    utils.WriteActivityDetails(claims.Username, claims.Email, fmt.Sprintf("Created store %s", store.Name), store.CreatedAt.Time),
-		IpAddress:  sql.NullString{Valid: true, String: utils.GetClientIP(c)},
-		UserAgent:  sql.NullString{Valid: true, String: c.Request.UserAgent()},
-	})
+	// _, err = h.service.LogActivity(c, db.CreateActivityLogParams{
+	// 	UserID:     int32(claims.UserID),
+	// 	Action:     "Created Store",
+	// 	EntityType: "Store",
+	// 	EntityID:   store.ID,
+	// 	Details:    utils.WriteActivityDetails(claims.Username, claims.Email, fmt.Sprintf("Created store %s", store.Name), store.CreatedAt.Time),
+	// 	IpAddress:  sql.NullString{Valid: true, String: utils.GetClientIP(c)},
+	// 	UserAgent:  sql.NullString{Valid: true, String: c.Request.UserAgent()},
+	// })
 
 	if err != nil {
 		h.logger.Warnf("error logging activity: %v", err)

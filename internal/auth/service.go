@@ -1,41 +1,3 @@
-// Service provides authentication and authorization functionalities for the Nucleus Business system.
-// It manages user registration, login, JWT token generation and refresh, session management,
-// email verification, password reset, role and permission management, and activity logging.
-//
-// Fields:
-//   - queries: Database queries interface for user, role, and token operations.
-//   - jwtSecret: Secret key for signing JWT access tokens.
-//   - jwtRefreshSecret: Secret key for signing JWT refresh tokens (can fallback to jwtSecret).
-//   - accessExpiry: Duration for which access tokens are valid.
-//   - refreshExpiry: Duration for which refresh tokens are valid.
-//   - redis: Redis client for caching and token blacklisting.
-//
-// Main Methods:
-//   - RegisterAdmin: Registers a new admin user with hashed password.
-//   - SetEmailVerification: Sets email verification code and expiry for a user.
-//   - VerifyEmailCode: Verifies the email code and marks email as verified if valid.
-//   - Login: Authenticates a user by email or username, returns access and refresh tokens.
-//   - RefreshToken: Rotates refresh tokens and issues new access tokens.
-//   - Logout: Blacklists a JWT token until its expiry.
-//   - IsTokenBlacklisted: Checks if a JWT token is blacklisted.
-//   - HasPermission: Checks if a user has a required permission.
-//   - RevokeAllUserSessions: Revokes all refresh tokens for a user and clears cache.
-//   - User Management: CreateUser, UpdateUser, DeleteUser, ResetPassword.
-//   - Role Management: CreateRole, UpdateRole, DeleteRole, AddPermissionToRole, RemovePermissionFromRole.
-//   - GetUserByID, GetUserByEmail, GetUserByUsername: Fetches user details, with Redis caching.
-//   - ListUsers, ListRoles, GetRolePermissions: Lists users, roles, and permissions.
-//   - Logging: LogUserActivity, LogLogin for auditing user actions and login attempts.
-//
-// Internal Utilities:
-//   - generateRefreshToken: Generates a secure random refresh token.
-//   - cleanExpiredTokens: Periodically cleans up expired refresh tokens from the database.
-//
-// Error Handling:
-//   - ErrInvalidCredentials: Returned when authentication fails.
-//   - ErrUserInactive: Returned when a user is inactive.
-//
-// This service is designed to be thread-safe and efficient, leveraging Redis for caching and token blacklisting,
-// and supports extensible role-based access control for fine-grained permission management.
 package auth
 
 import (
@@ -43,7 +5,6 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -64,6 +25,7 @@ var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
 	ErrUserInactive       = errors.New("user is inactive")
 	ErrUserNotFound       = errors.New("user not found")
+	ErrEmailNotVerified   = errors.New("email not verified")
 )
 
 type Service struct {
@@ -103,6 +65,7 @@ func NewService(queries Querier, jwtSecret, jwtRefreshSecret string, accessExpir
 		ipRateLimit:        ipRateLimit,
 		db:                 db,
 		logger:             logger,
+		// userService: u,
 	}
 }
 
@@ -113,6 +76,58 @@ func generateRefreshToken() (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(bytes), nil
+}
+
+// getUserPermissions retrieves all permissions for a user including role hierarchy
+func (s *Service) getUserPermissions(ctx context.Context, userID, tenantID int32) ([]string, error) {
+	// Get user permissions with hierarchy (includes inherited permissions from parent roles)
+	permissions, err := s.queries.GetUserPermissionsWithHierarchy(ctx, db.GetUserPermissionsWithHierarchyParams{
+		UserID:   userID,
+		TenantID: tenantID,
+	})
+	if err != nil {
+		// Check if it's a "no rows" error, which is acceptable for new users
+		if err == sql.ErrNoRows {
+			s.logger.Info("No permissions found for user", "userID", userID, "tenantID", tenantID)
+			return []string{}, nil
+		}
+		s.logger.Error("Failed to get user permissions", "error", err, "userID", userID, "tenantID", tenantID)
+		return nil, fmt.Errorf("failed to get user permissions: %w", err)
+	}
+
+	// Extract permission codes from the slice of rows
+	var permissionCodes []string
+	for _, perm := range permissions {
+		if perm.Code != "" { // Make sure we don't add empty permission codes
+			permissionCodes = append(permissionCodes, perm.Code)
+		}
+	}
+
+	// Remove duplicates (in case a user has the same permission through multiple roles)
+	permissionCodes = removeDuplicates(permissionCodes)
+
+	s.logger.Debug("Retrieved user permissions", "userID", userID, "tenantID", tenantID, "permissions", permissionCodes)
+	return permissionCodes, nil
+}
+
+// Helper function to remove duplicate permission codes
+func removeDuplicates(slice []string) []string {
+	keys := make(map[string]bool)
+	var result []string
+
+	for _, item := range slice {
+		if !keys[item] {
+			keys[item] = true
+			result = append(result, item)
+		}
+	}
+
+	return result
+}
+
+// updateUserLastLogin updates the user's last login timestamp
+func (s *Service) updateUserLastLogin(ctx context.Context, userID int32) error {
+	return s.queries.UpdateUserLastLogin(ctx, userID)
 }
 
 // Check and apply rate limiting
@@ -154,23 +169,23 @@ func (s *Service) checkRateLimits(ctx context.Context, username, ipAddress strin
 	return nil
 }
 
-func (s *Service) RegisterAdmin(ctx context.Context, username, email, password, first_name, last_name string) (db.Admin, error) {
-	log.Println("Registering new admin user:", username, email)
+func (s *Service) RegisterTenant(ctx context.Context, email, password, organization string) (*db.Tenant, error) {
+	log.Println("Registering new admin user:", organization, email)
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 12)
 	if err != nil {
 		s.logger.Error("error hashing password: ", err)
-		return db.Admin{}, err
+		return nil, err
 	}
 
 	q, ok := s.queries.(*db.Queries)
 	if !ok {
-		return db.Admin{}, fmt.Errorf("invalid queries implementation")
+		return nil, fmt.Errorf("invalid queries implementation")
 	}
 
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		s.logger.Error("error starting transaction: ", err)
-		return db.Admin{}, err
+		return nil, err
 	}
 
 	defer func() {
@@ -185,41 +200,23 @@ func (s *Service) RegisterAdmin(ctx context.Context, username, email, password, 
 	log.Println("Creating admin user in database")
 	txQueries := q.WithTx(tx)
 
-	log.Println("Admin user details:", username, email, first_name, last_name)
-	user, err := txQueries.CreateAdmin(ctx, db.CreateAdminParams{
-		Username:     username,
+	log.Println("Admin user details:", email, organization)
+	user, err := txQueries.CreateTenant(ctx, db.CreateTenantParams{
+		Organization: organization,
 		Email:        email,
-		FirstName:    first_name,
-		LastName:     last_name,
 		PasswordHash: string(hashedPassword),
-		RoleID:       1,
-		IsActive:     true,
 	})
 	if err != nil {
 		s.logger.Error("error creating admin user: ", err)
-		return db.Admin{}, err
+		return nil, err
 	}
 
-	log.Println("loging activity for new admin user:", username)
-	_, err = txQueries.LogActivity(ctx, db.LogActivityParams{
-		UserID:     user.ID,
-		Action:     "register_admin",
-		Details:    utils.WriteActivityDetails(username, email, "Registered new admin user", user.CreatedAt.Time),
-		EntityType: "admin",
-		EntityID:   user.ID,
-		IpAddress:  sql.NullString{Valid: true, String: utils.GetClientIP(ctx)},
-		UserAgent:  sql.NullString{Valid: true, String: ""},
-	})
-	if err != nil {
-		s.logger.Error("error logging activity: ", err)
-		return db.Admin{}, err
-	}
-	return user, nil
+	return &user, nil
 }
 
 // SetEmailVerification sets the verification code and expiry for a user.
 func (a *Service) SetEmailVerification(ctx context.Context, userID int32, code string, expiry time.Time) error {
-	return a.queries.SetAdminEmailVerification(ctx, db.SetAdminEmailVerificationParams{
+	return a.queries.SetTenantEmailVerification(ctx, db.SetTenantEmailVerificationParams{
 		ID:                    userID,
 		VerificationCode:      sql.NullString{Valid: code != "", String: code},
 		VerificationExpiresAt: sql.NullTime{Valid: true, Time: expiry},
@@ -228,7 +225,7 @@ func (a *Service) SetEmailVerification(ctx context.Context, userID int32, code s
 
 // VerifyEmailCode checks the code and marks the email as verified if valid and not expired.
 func (a *Service) VerifyEmailCode(ctx context.Context, email, code string) (bool, error) {
-	admin, err := a.queries.GetAdminByEmail(ctx, email)
+	admin, err := a.queries.GetTenantByEmail(ctx, email)
 	if err != nil {
 		return false, err
 	}
@@ -242,7 +239,7 @@ func (a *Service) VerifyEmailCode(ctx context.Context, email, code string) (bool
 		return false, nil // Expired
 	}
 	// Mark as verified and clear code
-	err = a.queries.MarkAdminEmailVerified(ctx, db.MarkAdminEmailVerifiedParams{
+	err = a.queries.MarkTenantEmailVerified(ctx, db.MarkTenantEmailVerifiedParams{
 		ID:            admin.ID,
 		EmailVerified: true,
 	})
@@ -308,9 +305,9 @@ func (s *Service) logLoginAttempt(ctx context.Context, usernameOrEmail, ipAddres
 	s.rClient.Expire(ctx, attemptKey, 24*time.Hour)
 }
 
-func (s *Service) Login(ctx context.Context, emailOrUsername, password, ipAddress, userAgent string) (string, string, error) {
+func (s *Service) Login(ctx context.Context, email, password, ipAddress, userAgent string, tenantID int32) (string, string, error) {
 	// Check rate limits
-	if err := s.checkRateLimits(ctx, emailOrUsername, ipAddress); err != nil {
+	if err := s.checkRateLimits(ctx, email, ipAddress); err != nil {
 		return "", "", err
 	}
 
@@ -319,179 +316,176 @@ func (s *Service) Login(ctx context.Context, emailOrUsername, password, ipAddres
 	s.rateLimiter.Increment(ctx, ipRequestKey, time.Minute)
 
 	// Helper to handle successful login
-	handleSuccess := func(userID int32, username, email, roleName, passwordHash string, isAdmin bool) (string, string, error) {
+	handleSuccess := func(userID, tenantID int32, passwordHash, email, organization, userType string) (string, string, error) {
 		if err := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(password)); err != nil {
-			s.recordFailedAttempt(ctx, emailOrUsername, ipAddress, "ErrInvalidCredentials")
-			remaining, _ := s.rateLimiter.GetRemainingAttempts(ctx, fmt.Sprintf("login_attempts:user:%s", emailOrUsername), s.loginRateLimit, s.loginRateWindow)
+			s.recordFailedAttempt(ctx, email, ipAddress, "ErrInvalidCredentials")
+			remaining, _ := s.rateLimiter.GetRemainingAttempts(ctx, fmt.Sprintf("login_attempts:user:%s", email), s.loginRateLimit, s.loginRateWindow)
 			return "", "", fmt.Errorf("invalid credentials. %d attempts remaining", remaining)
 		}
-		s.resetLoginAttempts(ctx, emailOrUsername)
+
+		s.resetLoginAttempts(ctx, email)
+
 		var permissions []string
 		var err error
-		if isAdmin {
-			permissions, err = s.queries.GetAdminPermissions(ctx, userID)
-		} else {
-			permissions, err = s.queries.GetUserPermissions(ctx, userID)
+
+		if userType == "user" && userID > 0 {
+			// Get permissions for regular users from RBAC system
+			permissions, err = s.getUserPermissions(ctx, userID, tenantID)
+			if err != nil {
+				s.logger.Error("failed to get user permission during login", "error", err)
+				// Continue with empty permissions rather than failing login
+				permissions = []string{}
+			}
+
+			// update last login timestamp
+			if err := s.updateUserLastLogin(ctx, userID); err != nil {
+				s.logger.Error("Failed to update last login", "error", err)
+			}
+		} else if userType == "tenant" {
+			permissions = []string{"tenant:manage"}
 		}
-		if err != nil {
-			return "", "", err
-		}
+
 		token, err := jwt.GenerateToken(
-			int(userID), username, email, roleName,
-			s.jwtSecret, permissions, jwt.AccessToken, s.accessExpiry,
-		)
+			int(userID), int(tenantID), email, organization, "", userType, s.jwtSecret, permissions, jwt.AccessToken, s.accessExpiry)
 		if err != nil {
-			return "", "", err
+			return "", "", fmt.Errorf("failed to generate token: %w", err)
 		}
+
 		refreshToken, err := generateRefreshToken()
 		if err != nil {
 			return "", "", err
 		}
-		expiresAt := time.Now().Add(s.refreshExpiry)
-		_, err = s.queries.CreateRefreshToken(ctx, db.CreateRefreshTokenParams{
-			UserID: userID, Token: refreshToken, ExpiresAt: expiresAt,
-		})
-		if err != nil {
-			return "", "", err
-		}
-		s.logLoginAttempt(ctx, emailOrUsername, ipAddress, userAgent, true, "success")
+		// expiresAt := time.Now().Add(s.refreshExpiry)
+		// _, err = s.queries.CreateRefreshToken(ctx, db.CreateRefreshTokenParams{
+		// 	UserID: userID, Token: refreshToken, ExpiresAt: expiresAt,
+		// })
+
+		s.logLoginAttempt(ctx, email, ipAddress, userAgent, true, "success")
 		return token, refreshToken, nil
 	}
 
-	// Try user by email
-	if userByEmail, err := s.queries.GetUserByEmail(ctx, sql.NullString{String: emailOrUsername, Valid: true}); err == nil {
-		if !userByEmail.IsActive.Bool {
-			s.recordFailedAttempt(ctx, emailOrUsername, ipAddress, "ErrUserInactive")
+	if tenant, err := s.queries.GetTenantByEmail(ctx, email); err == nil {
+		if !tenant.IsActive {
+			s.recordFailedAttempt(ctx, email, ipAddress, "ErrUserInactive")
 			return "", "", ErrUserInactive
 		}
-		return handleSuccess(userByEmail.ID, userByEmail.Username, userByEmail.Email.String, userByEmail.RoleName, userByEmail.PasswordHash, false)
+
+		if !tenant.EmailVerified {
+			s.recordFailedAttempt(ctx, email, ipAddress, "ErrEmailNotVerified")
+			return "", "", ErrEmailNotVerified
+		}
+
+		return handleSuccess(0, tenant.ID, tenant.PasswordHash, tenant.Email, tenant.Organization, "tenant")
 	}
 
-	// Try user by username
-	if userByUsername, err := s.queries.GetUserByUsername(ctx, emailOrUsername); err == nil {
-		if !userByUsername.IsActive.Bool {
-			s.recordFailedAttempt(ctx, emailOrUsername, ipAddress, "ErrUserInactive")
+	_, err := s.queries.GetTenantByID(ctx, tenantID)
+	if err != nil {
+		return "", "", err
+	}
+
+	if user, err := s.queries.GetUserByEmail(ctx, db.GetUserByEmailParams{
+		Email:     email,
+		TenantsID: tenantID,
+	}); err == nil {
+		if !user.IsActive {
+			s.recordFailedAttempt(ctx, email, ipAddress, "ErrUserInactive")
 			return "", "", ErrUserInactive
 		}
-		return handleSuccess(userByUsername.ID, userByUsername.Username, userByUsername.Email.String, userByUsername.RoleName, userByUsername.PasswordHash, false)
+
+		return handleSuccess(user.ID, user.TenantsID, user.PasswordHash, user.Email, "", "user")
 	}
 
-	// Try admin by email
-	if adminByEmail, err := s.queries.GetAdminByEmail(ctx, emailOrUsername); err == nil {
-		if !adminByEmail.IsActive {
-			s.recordFailedAttempt(ctx, emailOrUsername, ipAddress, "ErrUserInactive")
-			return "", "", ErrUserInactive
-		}
-		return handleSuccess(adminByEmail.ID, adminByEmail.Username, adminByEmail.Email, adminByEmail.RoleName, adminByEmail.PasswordHash, true)
-	}
-
-	// Try admin by username
-	if adminByUsername, err := s.queries.GetAdminByUsername(ctx, emailOrUsername); err == nil {
-		if !adminByUsername.IsActive {
-			s.recordFailedAttempt(ctx, emailOrUsername, ipAddress, "ErrUserInactive")
-			return "", "", ErrUserInactive
-		}
-		return handleSuccess(adminByUsername.ID, adminByUsername.Username, adminByUsername.Email, adminByUsername.RoleName, adminByUsername.PasswordHash, true)
-	}
-
-	s.recordFailedAttempt(ctx, emailOrUsername, ipAddress, "ErrUserNotFound")
+	s.recordFailedAttempt(ctx, email, ipAddress, "ErrUserNotFound")
 	return "", "", ErrInvalidCredentials
 }
 
-func (s *Service) RefreshToken(ctx context.Context, refreshToken string) (string, string, error) {
-	// Validate refresh token from database
-	tokenRecord, err := s.queries.GetRefreshToken(ctx, refreshToken)
-	if err != nil {
-		return "", "", ErrInvalidCredentials
-	}
+// func (s *Service) RefreshToken(ctx context.Context, refreshToken string) (string, string, error) {
+// 	// Validate refresh token from database
+// 	tokenRecord, err := s.queries.GetRefreshToken(ctx, refreshToken)
+// 	if err != nil {
+// 		return "", "", ErrInvalidCredentials
+// 	}
 
-	// Check if token is expired or revoked
-	if tokenRecord.ExpiresAt.Before(time.Now()) {
-		return "", "", ErrInvalidCredentials
-	}
+// 	// Check if token is expired or revoked
+// 	if tokenRecord.ExpiresAt.Before(time.Now()) {
+// 		return "", "", ErrInvalidCredentials
+// 	}
 
-	// Get user information
-	user, err := s.queries.GetUserByID(ctx, tokenRecord.UserID)
-	if err != nil {
-		return "", "", err
-	}
+// 	// Get user information
+// 	user, err := s.queries.GetDeveloperByID(ctx, tokenRecord.UserID)
+// 	if err != nil {
+// 		return "", "", err
+// 	}
 
-	if !user.IsActive.Bool {
-		return "", "", ErrUserInactive
-	}
+// 	if !user.IsActive.Bool {
+// 		return "", "", ErrUserInactive
+// 	}
 
-	permissions, err := s.queries.GetUserPermissions(ctx, user.ID)
-	if err != nil {
-		return "", "", err
-	}
+// 	// Generate new access token
+// 	newAccessToken, err := jwt.GenerateDevToken(
+// 		int(user.ID),
+// 		user.Email,
+// 		user.Organization,
+// 		s.jwtSecret,
+// 		jwt.AccessToken,
+// 		s.accessExpiry,
+// 	)
+// 	if err != nil {
+// 		return "", "", err
+// 	}
 
-	// Generate new access token
-	newAccessToken, err := jwt.GenerateToken(
-		int(user.ID),
-		user.Username,
-		user.Email.String,
-		user.RoleName,
-		s.jwtSecret,
-		permissions,
-		jwt.AccessToken,
-		s.accessExpiry,
-	)
-	if err != nil {
-		return "", "", err
-	}
+// 	// Generate new refresh token (rotate refresh token)
+// 	newRefreshToken, err := generateRefreshToken()
+// 	if err != nil {
+// 		return "", "", err
+// 	}
 
-	// Generate new refresh token (rotate refresh token)
-	newRefreshToken, err := generateRefreshToken()
-	if err != nil {
-		return "", "", err
-	}
+// 	expiresAt := time.Now().Add(s.refreshExpiry)
+// 	_, err = s.queries.CreateRefreshToken(ctx, db.CreateRefreshTokenParams{
+// 		UserID:    int32(user.ID),
+// 		Token:     newRefreshToken,
+// 		ExpiresAt: expiresAt,
+// 	})
+// 	if err != nil {
+// 		return "", "", err
+// 	}
 
-	expiresAt := time.Now().Add(s.refreshExpiry)
-	_, err = s.queries.CreateRefreshToken(ctx, db.CreateRefreshTokenParams{
-		UserID:    int32(user.ID),
-		Token:     newRefreshToken,
-		ExpiresAt: expiresAt,
-	})
-	if err != nil {
-		return "", "", err
-	}
+// 	// Revoke the old refresh token
+// 	if err := s.queries.RevokeRefreshToken(ctx, refreshToken); err != nil {
+// 		// Log error but continue
+// 		fmt.Printf("Error revoking refresh token: %v\n", err)
+// 	}
 
-	// Revoke the old refresh token
-	if err := s.queries.RevokeRefreshToken(ctx, refreshToken); err != nil {
-		// Log error but continue
-		fmt.Printf("Error revoking refresh token: %v\n", err)
-	}
+// 	return newAccessToken, newRefreshToken, nil
+// }
 
-	return newAccessToken, newRefreshToken, nil
-}
+// func (s *Service) cleanExpiredTokens(ctx context.Context) {
+// 	// Run cleanup every hour
+// 	ticker := time.NewTicker(time.Hour)
+// 	defer ticker.Stop()
 
-func (s *Service) cleanExpiredTokens(ctx context.Context) {
-	// Run cleanup every hour
-	ticker := time.NewTicker(time.Hour)
-	defer ticker.Stop()
+// 	for {
+// 		select {
+// 		case <-ticker.C:
+// 			if err := s.queries.CleanExpiredRefreshTokens(ctx); err != nil {
+// 				fmt.Printf("Error cleaning expired tokens: %v\n", err)
+// 			}
+// 		case <-ctx.Done():
+// 			return
+// 		}
+// 	}
+// }
 
-	for {
-		select {
-		case <-ticker.C:
-			if err := s.queries.CleanExpiredRefreshTokens(ctx); err != nil {
-				fmt.Printf("Error cleaning expired tokens: %v\n", err)
-			}
-		case <-ctx.Done():
-			return
-		}
-	}
-}
+// func (s *Service) RevokeAllUserSessions(ctx context.Context, userID int) error {
+// 	// Revoke all refresh tokens for user
+// 	if err := s.queries.RevokeAllUserRefreshTokens(ctx, int32(userID)); err != nil {
+// 		return err
+// 	}
 
-func (s *Service) RevokeAllUserSessions(ctx context.Context, userID int) error {
-	// Revoke all refresh tokens for user
-	if err := s.queries.RevokeAllUserRefreshTokens(ctx, int32(userID)); err != nil {
-		return err
-	}
-
-	// Add user's tokens to blacklist (you might want to track user's active tokens)
-	cacheKey := fmt.Sprintf("user:%d:active_tokens", userID)
-	return s.redis.Delete(ctx, cacheKey)
-}
+// 	// Add user's tokens to blacklist (you might want to track user's active tokens)
+// 	cacheKey := fmt.Sprintf("user:%d:active_tokens", userID)
+// 	return s.redis.Delete(ctx, cacheKey)
+// }
 
 func (s *Service) Logout(ctx context.Context, token string, expiry time.Duration) error {
 	claims, err := jwt.ParseToken(token, s.jwtSecret)
@@ -520,171 +514,14 @@ func (s *Service) HasPermission(claims *jwt.Claims, requiredPermission string) b
 	return slices.Contains(claims.Permissions, requiredPermission)
 }
 
-// Admin user management functions
-func (s *Service) CreateUser(ctx context.Context, params db.CreateUserParams) (db.User, error) {
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(params.PasswordHash), bcrypt.DefaultCost)
-	if err != nil {
-		return db.User{}, err
-	}
-
-	params.PasswordHash = string(hashedPassword)
-	return s.queries.CreateUser(ctx, params)
-}
-
-func (s *Service) UpdateUser(ctx context.Context, params db.UpdateUserParams) (db.User, error) {
-	updatedUser, err := s.queries.UpdateUser(ctx, params)
-	if err != nil {
-		return db.User{}, err
-	}
-	// Invalidate cache
-	cacheKey := fmt.Sprintf("user:%d", params.ID)
-	s.redis.Delete(ctx, cacheKey)
-	return updatedUser, nil
-}
-
-func (s *Service) DeleteUser(ctx context.Context, id int32) error {
-	return s.queries.DeleteUser(ctx, id)
-}
-
-func (s *Service) ResetPassword(ctx context.Context, params db.UpdateUserPasswordParams) error {
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(params.PasswordHash), bcrypt.DefaultCost)
-	if err != nil {
-		return err
-	}
-	params.PasswordHash = string(hashedPassword)
-	return s.queries.UpdateUserPassword(ctx, params)
-}
-
-// Role management functions
-func (s *Service) CreateRole(ctx context.Context, params db.CreateRoleParams) (db.Role, error) {
-	return s.queries.CreateRole(ctx, params)
-}
-
-func (s *Service) UpdateRole(ctx context.Context, params db.UpdateRoleParams) (db.Role, error) {
-	return s.queries.UpdateRole(ctx, params)
-}
-
-func (s *Service) DeleteRole(ctx context.Context, id int32) error {
-	return s.queries.DeleteRole(ctx, id)
-}
-
-func (s *Service) AddPermissionToRole(ctx context.Context, params db.AddPermissionToRoleParams) error {
-	return s.queries.AddPermissionToRole(ctx, params)
-}
-
-func (s *Service) RemovePermissionFromRole(ctx context.Context, params db.RemovePermissionFromRoleParams) error {
-	return s.queries.RemovePermissionFromRole(ctx, params)
-}
-
-func (s *Service) GetUserByID(ctx context.Context, id int32) (db.GetUserByIDRow, error) {
-	cacheKey := fmt.Sprintf("user:%d", id)
-
-	// Try cache first
-	if cachedUser, err := s.redis.Get(ctx, cacheKey); err == nil {
-		var user db.GetUserByIDRow
-		err = json.Unmarshal([]byte(cachedUser), &user)
-		if err != nil {
-			return db.GetUserByIDRow{}, err
-		}
-		return user, nil
-	}
-
-	// Fetch from database if no cache
-	user, err := s.queries.GetUserByID(ctx, id)
-	if err != nil {
-		return db.GetUserByIDRow{}, err
-	}
-
-	// Cache for 30 minutes
-	jsonUser, _ := json.Marshal(user)
-	s.redis.Set(ctx, cacheKey, jsonUser, 30*time.Minute)
-	return user, nil
-}
-
-func (s *Service) GetUserByEmail(ctx context.Context, email string) (db.GetUserByEmailRow, error) {
-	cacheKey := fmt.Sprintf("user:email:%s", email)
-
-	// Try cache first
-	if cachedUser, err := s.redis.Get(ctx, cacheKey); err == nil {
-		var user db.GetUserByEmailRow
-		err = json.Unmarshal([]byte(cachedUser), &user)
-		if err != nil {
-			return db.GetUserByEmailRow{}, err
-		}
-		return user, nil
-	}
-
-	// Fetch from database if no cache
-	user, err := s.queries.GetUserByEmail(ctx, sql.NullString{String: email, Valid: true})
-	if err != nil {
-		return db.GetUserByEmailRow{}, err
-	}
-
-	// Cache for 30 minutes
-	jsonUser, _ := json.Marshal(user)
-	s.redis.Set(ctx, cacheKey, jsonUser, 30*time.Minute)
-	return user, nil
-}
-
-func (s *Service) GetUserByUsername(ctx context.Context, username string) (db.GetUserByUsernameRow, error) {
-	cachedKey := fmt.Sprintf("user_by_username:%s", username)
-	if cachedUser, err := s.redis.Get(ctx, cachedKey); err == nil {
-		var user db.GetUserByUsernameRow
-		err = json.Unmarshal([]byte(cachedUser), &user)
-		if err != nil {
-			return db.GetUserByUsernameRow{}, err
-		}
-		return user, nil
-	}
-
-	// Fetch from database if no cache
-	user, err := s.queries.GetUserByUsername(ctx, username)
-	if err != nil {
-		return db.GetUserByUsernameRow{}, err
-	}
-
-	// Cache for 30 minutes
-	jsonUser, _ := json.Marshal(user)
-	s.redis.Set(ctx, cachedKey, jsonUser, 30*time.Minute)
-	return user, nil
-}
-
-func (s *Service) ListUsers(ctx context.Context) ([]db.ListUsersRow, error) {
-	return s.queries.ListUsers(ctx)
-}
-
-func (s *Service) ListRoles(ctx context.Context) ([]db.Role, error) {
-	return s.queries.ListRoles(ctx)
-}
-
-func (s *Service) GetRolePermissions(ctx context.Context, roleID int32) ([]db.Permission, error) {
-	return s.queries.GetRolePermissions(ctx, roleID)
-}
-
-func (s *Service) LogActivity(ctx context.Context, params db.LogActivityParams) error {
-	_, err := s.queries.LogActivity(ctx, params)
-	return err
-}
-
-// func (s *Service) LogLogin(ctx context.Context, username, email string, ip, userAgent string, success bool, errorReason string) error {
-// 	err := s.queries.LogLoginAttempt(ctx, db.LogLoginAttemptParams{
-// 		Username:    username,
-// 		Email:       sql.NullString{String: email, Valid: email != ""},
-// 		IpAddress:   sql.NullString{String: ip, Valid: ip != ""},
-// 		UserAgent:   sql.NullString{String: userAgent, Valid: userAgent != ""},
-// 		ErrorReason: sql.NullString{String: errorReason, Valid: errorReason != ""},
-// 	})
-// 	return err
-// }
-
 // ForgotPassword: generates a reset code and expiry, stores it for user/admin
 func (s *Service) ForgotPassword(ctx context.Context, email string) (string, error) {
-	admin, err := s.queries.GetAdminByEmail(ctx, email)
+	admin, err := s.queries.GetTenantByEmail(ctx, email)
 	if err == nil {
 		code := utils.GenerateOTP()
 		fmt.Println("Generated code:", code)
 		expiry := time.Now().Add(15 * time.Minute)
-		err := s.queries.SetAdminResetCode(ctx, db.SetAdminResetCodeParams{
+		err := s.queries.SetTenantResetCode(ctx, db.SetTenantResetCodeParams{
 			ID:                 admin.ID,
 			ResetCode:          sql.NullString{String: code, Valid: true},
 			ResetCodeExpiresAt: sql.NullTime{Time: expiry, Valid: true},
@@ -699,14 +536,14 @@ func (s *Service) ForgotPassword(ctx context.Context, email string) (string, err
 }
 
 // ResetPassword: verifies code and sets new password for user/admin
-func (s *Service) ResetAdminPassword(ctx context.Context, email, code, newPassword string) error {
-	admin, err := s.queries.GetAdminByEmail(ctx, email)
+func (s *Service) ResetDeveloperPassword(ctx context.Context, email, code, newPassword string) error {
+	admin, err := s.queries.GetTenantByEmail(ctx, email)
 	if err == nil {
 		if !admin.ResetCode.Valid || admin.ResetCode.String != code || !admin.ResetCodeExpiresAt.Valid || admin.ResetCodeExpiresAt.Time.Before(time.Now()) {
 			return errors.New("invalid or expired code")
 		}
 		hashed, _ := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
-		err := s.queries.UpdateAdminPassword(ctx, db.UpdateAdminPasswordParams{
+		err := s.queries.UpdateTenantPassword(ctx, db.UpdateTenantPasswordParams{
 			ID:           admin.ID,
 			PasswordHash: string(hashed),
 		})
@@ -714,7 +551,7 @@ func (s *Service) ResetAdminPassword(ctx context.Context, email, code, newPasswo
 			return err
 		}
 		// Clear reset code
-		_ = s.queries.ClearAdminResetCode(ctx, admin.ID)
+		_ = s.queries.ClearTenantResetCode(ctx, admin.ID)
 		return nil
 	}
 

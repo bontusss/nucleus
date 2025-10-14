@@ -1,6 +1,6 @@
 -- name: CreateBusiness :one
 INSERT INTO businesses (
-    owner_id, name, motto, email, website, tax_id, vat_number,
+    tenants_id, name, motto, email, website, tax_id, vat_number,
     country, logo_url, metadata
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7,
@@ -10,12 +10,12 @@ INSERT INTO businesses (
 -- name: GetBusiness :one
 SELECT *
 FROM businesses
-WHERE id = $1 AND owner_id = $2;
+WHERE id = $1 AND tenants_id = $2;
 
 -- name: ListBusinesses :many
 SELECT *
 FROM businesses
-WHERE owner_id = $1
+WHERE tenants_id = $1
 ORDER BY created_at;
 
 -- name: UpdateBusiness :one
@@ -30,12 +30,12 @@ UPDATE businesses SET
     country = COALESCE(sqlc.narg(country), country),
     metadata = COALESCE(sqlc.narg(metadata), metadata),
     updated_at = CURRENT_TIMESTAMP
-WHERE id = sqlc.arg(id) AND owner_id = sqlc.arg(owner_id)
+WHERE id = sqlc.arg(id) AND tenants_id = sqlc.arg(tenants_id)
 RETURNING *;
 
 -- name: DeleteBusiness :one
 DELETE FROM businesses
-WHERE id = $1 AND owner_id = $2
+WHERE id = $1 AND tenants_id = $2
 RETURNING *;
 
 
@@ -48,7 +48,7 @@ INSERT INTO branches (
 
 -- name: GetBranch :one
 SELECT * FROM branches
-WHERE id = $1;
+WHERE id = $1 AND business_id = $2;
 
 -- name: ListBranches :many
 SELECT * FROM branches

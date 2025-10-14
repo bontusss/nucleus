@@ -6,9 +6,9 @@ import (
 )
 
 type Querier interface {
-	GetActivityLogs(ctx context.Context, limit int32) ([]db.ActivityLog, error)
+	GetActivityLog(ctx context.Context, params db.GetActivityLogParams) (db.ActivityLog, error)
 }
 
 type LogsInterface interface {
-	GetActivityLogs(ctx context.Context, limit int32) ([]db.ActivityLog, error)
+	GetActivityLogs(ctx context.Context, params db.GetActivityLogParams) (db.ActivityLog, error)
 }

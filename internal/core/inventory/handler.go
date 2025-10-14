@@ -7,7 +7,6 @@ import (
 	"nucleus/internal/auth"
 	"nucleus/internal/core/api"
 	"nucleus/internal/utils"
-	"nucleus/pkg/jwt"
 	"nucleus/pkg/monitoring/logging"
 
 	"github.com/gin-gonic/gin"
@@ -85,12 +84,12 @@ type CreateBrandResponse struct {
 // @Success 201 {object} CreateBrandResponse
 // @Router /api/v1/inventory/brand [post]
 func (h *Handler) createBrand(c *gin.Context) {
-	claims, ok := jwt.GetUserFromContext(c)
-	if !ok {
-		h.logger.Errorf("could not get user from context")
-		api.ErrorResponse(c, 500, api.SERVERERROR)
-		return
-	}
+	// claims, ok := jwt.GetUserFromContext(c)
+	// if !ok {
+	// 	h.logger.Errorf("could not get user from context")
+	// 	api.ErrorResponse(c, 500, api.SERVERERROR)
+	// 	return
+	// }
 
 	// Parse form-data (multipart) instead of JSON
 	if err := c.Request.ParseMultipartForm(10 << 20); err != nil { // 10MB limit
@@ -139,15 +138,15 @@ func (h *Handler) createBrand(c *gin.Context) {
 		return
 	}
 
-	h.service.LogActivity(c, db.LogActivityParams{
-		UserID:     int32(claims.UserID),
-		EntityID:   brand.ID,
-		Action:     "Created Brand",
-		EntityType: "Brand",
-		Details:    utils.WriteActivityDetails(claims.Username, claims.Email, fmt.Sprintf("Created brand %s", brand.Name), brand.CreatedAt.Time),
-		IpAddress:  sql.NullString{Valid: true, String: utils.GetClientIP(c)},
-		UserAgent:  sql.NullString{Valid: true, String: c.Request.UserAgent()},
-	})
+	// h.service.LogActivity(c, db.CreateActivityLogParams{
+	// 	UserID:     int32(claims.UserID),
+	// 	EntityID:   brand.ID,
+	// 	Action:     "Created Brand",
+	// 	EntityType: "Brand",
+	// 	Details:    utils.WriteActivityDetails(claims.Username, claims.Email, fmt.Sprintf("Created brand %s", brand.Name), brand.CreatedAt.Time),
+	// 	IpAddress:  sql.NullString{Valid: true, String: utils.GetClientIP(c)},
+	// 	UserAgent:  sql.NullString{Valid: true, String: c.Request.UserAgent()},
+	// })
 
 	api.SuccessResponse(c, 201, "brand created", CreateBrandResponse{
 		ID:          brand.ID,
@@ -188,12 +187,12 @@ type CategoryResponse struct {
 // @Failure 500
 // @Router /api/v1/inventory/category [post]
 func (h *Handler) createCategory(c *gin.Context) {
-	claims, ok := jwt.GetUserFromContext(c)
-	if !ok {
-		h.logger.Errorf("could not get user from context")
-		api.ErrorResponse(c, 500, api.SERVERERROR)
-		return
-	}
+	// claims, ok := jwt.GetUserFromContext(c)
+	// if !ok {
+	// 	h.logger.Errorf("could not get user from context")
+	// 	api.ErrorResponse(c, 500, api.SERVERERROR)
+	// 	return
+	// }
 
 	var req Category
 	if err := c.ShouldBind(&req); err != nil {
@@ -238,15 +237,15 @@ func (h *Handler) createCategory(c *gin.Context) {
 		return
 	}
 
-	h.service.LogActivity(c, db.LogActivityParams{
-		UserID:     int32(claims.UserID),
-		EntityID:   category.ID,
-		Action:     "Created Category",
-		EntityType: "Category",
-		Details:    utils.WriteActivityDetails(claims.Username, claims.Email, fmt.Sprintf("Created category %s", category.Name), category.CreatedAt.Time),
-		IpAddress:  sql.NullString{Valid: true, String: utils.GetClientIP(c)},
-		UserAgent:  sql.NullString{Valid: true, String: c.Request.UserAgent()},
-	})
+	// h.service.LogActivity(c, db.CreateActivityLogParams{
+	// 	UserID:     int32(claims.UserID),
+	// 	EntityID:   category.ID,
+	// 	Action:     "Created Category",
+	// 	EntityType: "Category",
+	// 	Details:    utils.WriteActivityDetails(claims.Username, claims.Email, fmt.Sprintf("Created category %s", category.Name), category.CreatedAt.Time),
+	// 	IpAddress:  sql.NullString{Valid: true, String: utils.GetClientIP(c)},
+	// 	UserAgent:  sql.NullString{Valid: true, String: c.Request.UserAgent()},
+	// })
 
 	api.SuccessResponse(c, 201, "created category", CategoryResponse{
 		ID:          category.ID,
@@ -475,12 +474,12 @@ func safePrefix(s string, length int) string {
 // @Failure 500
 // @Router /api/v1/inventory/variation [post]
 func (h *Handler) CreateVariation(c *gin.Context) {
-	claims, ok := jwt.GetUserFromContext(c)
-	if !ok {
-		h.logger.Errorf("could not get user from context")
-		api.ErrorResponse(c, 500, api.SERVERERROR)
-		return
-	}
+	// claims, ok := jwt.GetUserFromContext(c)
+	// if !ok {
+	// 	h.logger.Errorf("could not get user from context")
+	// 	api.ErrorResponse(c, 500, api.SERVERERROR)
+	// 	return
+	// }
 
 	var req VariationRequest
 	if err := c.ShouldBind(&req); err != nil {
@@ -564,15 +563,15 @@ func (h *Handler) CreateVariation(c *gin.Context) {
 		return
 	}
 
-	h.service.LogActivity(c, db.LogActivityParams{
-		UserID:     int32(claims.UserID),
-		EntityID:   variant.ID,
-		Action:     "Created Variant",
-		EntityType: "Variation",
-		Details:    utils.WriteActivityDetails(claims.Username, claims.Email, fmt.Sprintf("Created variant %s", variant.Name), variant.CreatedAt.Time),
-		IpAddress:  sql.NullString{Valid: true, String: utils.GetClientIP(c)},
-		UserAgent:  sql.NullString{Valid: true, String: c.Request.UserAgent()},
-	})
+	// h.service.LogActivity(c, db.CreateActivityLogParams{
+	// 	UserID:     int32(claims.UserID),
+	// 	EntityID:   variant.ID,
+	// 	Action:     "Created Variant",
+	// 	EntityType: "Variation",
+	// 	Details:    utils.WriteActivityDetails(claims.Username, claims.Email, fmt.Sprintf("Created variant %s", variant.Name), variant.CreatedAt.Time),
+	// 	IpAddress:  sql.NullString{Valid: true, String: utils.GetClientIP(c)},
+	// 	UserAgent:  sql.NullString{Valid: true, String: c.Request.UserAgent()},
+	// })
 
 	api.SuccessResponse(c, 201, "variant created", VariationResponse{
 		ID:        variant.ID,

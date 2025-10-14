@@ -1,0 +1,28 @@
+meta {
+  name: Test webhook
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseURI}}webhooks/1/test
+  body: json
+  auth: apikey
+}
+
+auth:apikey {
+  key: {{var}}
+  value: {{key}}
+  placement: header
+}
+
+body:json {
+  {
+    "event_type": "were",
+    "test_data": "test data here"
+  }
+}
+
+settings {
+  encodeUrl: true
+}

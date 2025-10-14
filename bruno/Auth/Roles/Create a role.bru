@@ -1,0 +1,27 @@
+meta {
+  name: Create a role
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseURI}}roles
+  body: json
+  auth: apikey
+}
+
+auth:apikey {
+  key: {{var}}
+  value: {{key}}
+  placement: header
+}
+
+body:json {
+  {
+    "name": "test role"
+  }
+}
+
+settings {
+  encodeUrl: true
+}
