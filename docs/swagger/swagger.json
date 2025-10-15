@@ -219,12 +219,13 @@
             "post": {
                 "security": [
                     {
+                        "ApiKeyAuth": [],
                         "BearerAuth": []
                     }
                 ],
-                "description": "Create a new business/organization record and link it to the authenticated user as the owner.\n\n### Features\n- Accepts required and optional business details (name, email, website, tax ID, motto, etc.).\n- Allows uploading a business logo (JPG/PNG, max 2MB).\n- Supports attaching custom metadata as a JSON object.\n- Automatically sets the authenticated user as the owner of the business.\n- Logs the creation activity for auditing purposes.\n\n### Notes\n- A default branch called \"Main\" is created automatically when creating an org.\n- The `metadata` field must be a valid JSON string. Example: {\"industry\":\"Hospitality\",\"branches\":5}\n- The `logo` field must be a JPG or PNG image not exceeding 2MB.\n- On success, the response includes full business details, metadata, and timestamps.\n{\n\"industry\": \"Hospitality\",\n\"branches\": 5,\n\"subscription\": \"premium\"\n}",
+                "description": "Create a new business/organization record and link it to the authenticated user as the owner.\n\n### Features\n- Accepts required and optional business details (name, email, website, tax ID, motto, etc.).\n- Supports attaching custom metadata as a JSON object.\n- Logs the creation activity for auditing purposes.\n- Returns a business.created event when a business is created successfully.\n\n### Notes\n- A default branch called \"Main\" is created automatically when creating an org.\n- The `metadata` field must be a valid JSON string. Example: {\"industry\":\"Hospitality\",\"branches\":5}\n- On success, the response includes full business details, metadata, and timestamps.\n{\n\"industry\": \"Hospitality\",\n\"branches\": 5,\n\"subscription\": \"premium\"\n}",
                 "consumes": [
-                    "multipart/form-data"
+                    "application/json"
                 ],
                 "produces": [
                     "application/json"
@@ -235,60 +236,13 @@
                 "summary": "Create an organization",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "Business name",
-                        "name": "name",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Business email",
-                        "name": "email",
-                        "in": "formData"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Business website",
-                        "name": "website",
-                        "in": "formData"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Tax ID",
-                        "name": "tax_id",
-                        "in": "formData"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Motto",
-                        "name": "motto",
-                        "in": "formData"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Country of business",
-                        "name": "country",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "VAT Number",
-                        "name": "vat_number",
-                        "in": "formData"
-                    },
-                    {
-                        "type": "file",
-                        "description": "Business logo (JPG/PNG, max 2MB)",
-                        "name": "logo",
-                        "in": "formData"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Custom metadata in JSON format",
-                        "name": "metadata",
-                        "in": "formData"
+                        "description": "Business details",
+                        "name": "business",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/business.CreateBusinessParams"
+                        }
                     }
                 ],
                 "responses": {
@@ -3555,6 +3509,49 @@
                 "phone": {
                     "type": "string",
                     "example": "+2349028378964"
+                }
+            }
+        },
+        "business.CreateBusinessParams": {
+            "type": "object",
+            "required": [
+                "country",
+                "email",
+                "name"
+            ],
+            "properties": {
+                "country": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "admin@palmwinexpress.com"
+                },
+                "logo_url": {
+                    "type": "string",
+                    "example": "https://imgur.com/234343"
+                },
+                "metadata": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "motto": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Palmwineexpress hotels"
+                },
+                "tax_id": {
+                    "type": "string",
+                    "example": "123456789"
+                },
+                "vat_number": {
+                    "type": "string"
+                },
+                "website": {
+                    "type": "string",
+                    "example": "https://palmwinexpress.com"
                 }
             }
         },

@@ -245,6 +245,37 @@ definitions:
         example: "+2349028378964"
         type: string
     type: object
+  business.CreateBusinessParams:
+    properties:
+      country:
+        type: string
+      email:
+        example: admin@palmwinexpress.com
+        type: string
+      logo_url:
+        example: https://imgur.com/234343
+        type: string
+      metadata:
+        additionalProperties: {}
+        type: object
+      motto:
+        type: string
+      name:
+        example: Palmwineexpress hotels
+        type: string
+      tax_id:
+        example: "123456789"
+        type: string
+      vat_number:
+        type: string
+      website:
+        example: https://palmwinexpress.com
+        type: string
+    required:
+    - country
+    - email
+    - name
+    type: object
   business.ListBusinessResponse:
     properties:
       country:
@@ -1352,21 +1383,19 @@ paths:
   /api/v1/org:
     post:
       consumes:
-      - multipart/form-data
+      - application/json
       description: |-
         Create a new business/organization record and link it to the authenticated user as the owner.
 
         ### Features
         - Accepts required and optional business details (name, email, website, tax ID, motto, etc.).
-        - Allows uploading a business logo (JPG/PNG, max 2MB).
         - Supports attaching custom metadata as a JSON object.
-        - Automatically sets the authenticated user as the owner of the business.
         - Logs the creation activity for auditing purposes.
+        - Returns a business.created event when a business is created successfully.
 
         ### Notes
         - A default branch called "Main" is created automatically when creating an org.
         - The `metadata` field must be a valid JSON string. Example: {"industry":"Hospitality","branches":5}
-        - The `logo` field must be a JPG or PNG image not exceeding 2MB.
         - On success, the response includes full business details, metadata, and timestamps.
         {
         "industry": "Hospitality",
@@ -1374,44 +1403,12 @@ paths:
         "subscription": "premium"
         }
       parameters:
-      - description: Business name
-        in: formData
-        name: name
+      - description: Business details
+        in: body
+        name: business
         required: true
-        type: string
-      - description: Business email
-        in: formData
-        name: email
-        type: string
-      - description: Business website
-        in: formData
-        name: website
-        type: string
-      - description: Tax ID
-        in: formData
-        name: tax_id
-        type: string
-      - description: Motto
-        in: formData
-        name: motto
-        type: string
-      - description: Country of business
-        in: formData
-        name: country
-        required: true
-        type: string
-      - description: VAT Number
-        in: formData
-        name: vat_number
-        type: string
-      - description: Business logo (JPG/PNG, max 2MB)
-        in: formData
-        name: logo
-        type: file
-      - description: Custom metadata in JSON format
-        in: formData
-        name: metadata
-        type: string
+        schema:
+          $ref: '#/definitions/business.CreateBusinessParams'
       produces:
       - application/json
       responses:
@@ -1428,7 +1425,8 @@ paths:
         "500":
           description: Internal Server Error
       security:
-      - BearerAuth: []
+      - ApiKeyAuth: []
+        BearerAuth: []
       summary: Create an organization
       tags:
       - Organization

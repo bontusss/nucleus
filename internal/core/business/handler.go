@@ -130,16 +130,8 @@ type OrgWithBranchResponse struct {
 // @Tags Organization
 // @Accept json
 // @Produce json
-// @Security BearerAuth
-// @Param name string true "Business name"
-// @Param email string false "Business email"
-// @Param website string false "Business website"
-// @Param tax_id string false "Tax ID"
-// @Param motto string false "Motto"
-// @Param country string true "Country of business"
-// @Param vat_number string false "VAT Number"
-// @Param logo file false "Business logo (JPG/PNG, max 2MB)"
-// @Param metadata string false "Custom metadata in JSON format"
+// @Security BearerAuth && ApiKeyAuth
+// @Param business body CreateBusinessParams true "Business details"
 // @Description {
 // @Description   "industry": "Hospitality",
 // @Description   "branches": 5,
@@ -220,11 +212,11 @@ func (h *Handler) createBusiness(c *gin.Context) {
 
 	// Create event and send a webhook
 	event := webhook.WebhookEvent{
-		Type: "business.created",
-		Data: map[string]any{"business": business, "branch": branch},
+		Type:      "business.created",
+		Data:      map[string]any{"business": business, "branch": branch},
 		Timestamp: time.Now(),
-		TenantID: user.TenantID,
-		Module: "business",
+		TenantID:  user.TenantID,
+		Module:    "business",
 	}
 
 	if err := h.webhooks.TriggerEvent(c, event); err != nil {
@@ -657,21 +649,18 @@ func (h *Handler) createBranch(c *gin.Context) {
 		return
 	}
 
-	// add activity log here
-	_, err = h.service.CreateActivityLog(c, db.CreateActivityLogParams{
-		UserID:     int32(claims.UserID),
-		Action:     "Created branch",
-		EntityType: "Branch",
-		EntityID:   branch.ID,
-		Details:    utils.WriteActivityDetails("system", "system", fmt.Sprintf("Created branch %s for business id %d", branch.Name, branch.BusinessID), branch.CreatedAt.Time),
-		IpAddress:  sql.NullString{Valid: true, String: utils.GetClientIP(c)},
-		UserAgent:  sql.NullString{Valid: true, String: c.Request.UserAgent()},
-	})
-
-	if err != nil {
-		h.logger.Warnf("error logging activity: %v", err)
-		// not returning error to user as branch has been created successfully
+	event := webhook.WebhookEvent{
+		Type:      "branch.created",
+		Data:      map[string]any{"branch": branch},
+		Timestamp: time.Now(),
+		TenantID:  claims.TenantID,
+		Module:    "organization",
 	}
+
+	if err := h.webhooks.TriggerEvent(c, event); err != nil {
+		h.logger.Warnf("failed to trigger branch.created webhook: %v", err)
+	}
+	// add audit log here
 
 	api.SuccessResponse(c, 201, "branch created", CreateBranchResponse{
 		BusinessID: branch.BusinessID,
